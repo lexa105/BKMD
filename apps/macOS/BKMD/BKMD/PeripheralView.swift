@@ -40,6 +40,8 @@ struct PeripheralView: View {
                 .buttonStyle(.borderedProminent)
                 
                 Button("Key Log") {
+                    let modeChannelCBUUID: CBUUID = CBUUID(string: "1234")
+                    manager.toggleToWriteMode(peripheral, to: modeChannelCBUUID )
                     
                 }
             }
