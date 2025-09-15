@@ -1,0 +1,75 @@
+# macOS
+.DS_Store
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.xcscmblueprint
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.playground/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# Carthage
+Carthage/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+
+# C/C++ build artifacts
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+CMakeScripts/
+Testing/
+Makefile
+CTestTestfile.cmake
+compile_commands.json
+install_manifest.txt
+*.d
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.la
+*.lib
+*.exp
+*.pdb
+*.exe
+*.out
+*.app
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.python-version
+venv/
+ENV/
+env/
+.venv/
+python-scripts/venv/
+
+# Editors/IDEs
+.vscode/
+.idea/
+
+# Logs and temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Project-specific debug folder
+KeyLogger/
