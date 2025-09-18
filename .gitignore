@@ -71,5 +71,5 @@ python-scripts/venv/
 *.swp
 *.swo
 
-# Project-specific debug folder
+# Testing different keylogger sofwatre opensource. 
 KeyLogger/
