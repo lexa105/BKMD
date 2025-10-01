@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject var bluetoothManager = BluetoothManager() // 👈 create instance
+    @StateObject var keyboardMonitor = KeyboardMonitor() 
     @State private var selectedPeripheralID: UUID? = nil
 
     var body: some View {
@@ -20,6 +21,7 @@ struct ContentView: View {
             if let id = selectedPeripheralID,
                let peripheral = bluetoothManager.peripherals.first(where: { $0.identifier == id}) {
                 PeripheralView(manager: bluetoothManager, peripheral: peripheral)
+                    .environmentObject(keyboardMonitor)
                  Spacer()
             }
                 else {

@@ -2,7 +2,8 @@
 //  BKMDApp.swift
 //  BKMD
 //
-//  Created by MacBook on 12.07.2025.
+//  Created by MacBook on 12.07.2025
+
 //
 
 import SwiftUI
@@ -14,4 +15,5 @@ struct BKMDApp: App {
             ContentView()
         }
     }
+    
 }
