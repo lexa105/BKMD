@@ -12,6 +12,10 @@ struct PeripheralView: View {
     @ObservedObject var manager: BluetoothManager
     var peripheral: CBPeripheral
     
+    @EnvironmentObject var monitor: KeyboardMonitor
+    
+
+    
     private var isConnected: Bool {
         manager.connectedPeripheralIDs.contains(peripheral.identifier)
     }
@@ -39,10 +43,12 @@ struct PeripheralView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 
-                Button("Key Log") {
-                    let modeChannelCBUUID: CBUUID = CBUUID(string: "1234")
-                    manager.toggleToWriteMode(peripheral, to: modeChannelCBUUID )
-                    
+                Button("Start Monitoring") {
+                    monitor.start()
+                }
+                
+                Button("Stop Monitoring") {
+                    monitor.stop()
                 }
             }
             

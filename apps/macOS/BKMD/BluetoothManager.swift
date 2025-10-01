@@ -84,14 +84,18 @@ final class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelega
    func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
        if !peripherals.contains(peripheral) {
            peripherals.append(peripheral)
-           print("📡 Found: \(peripheral.name ?? "Unknown")")
+           
+           //LOGS when found a device
+//           print("📡 Found: \(peripheral.name ?? "Unknown")")
        }
     }
     
     // Called when connect to the peripheral
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        print("✅ Connected to \(peripheral.name ?? "Unknown")")
-        print("\(peripheral.name ?? "Uknown") Service: \(peripheral.services ?? [])")
+        
+        //LOGS the activity
+//        print("✅ Connected to \(peripheral.name ?? "Unknown")")
+//        print("\(peripheral.name ?? "Uknown") Service: \(peripheral.services ?? [])")
         connectedPeripheralIDs.insert(peripheral.identifier)
         peripheral.delegate = self
         peripheral.discoverServices(nil)
