@@ -9,19 +9,15 @@ import Foundation
 import Cocoa
 
 class CallbackFunctions {
-//    static func Handle_IOHIDInputValueCallback(context: UnsafeMutableRawPointer?, result: IOReturn, sender: UnsafeRawPointer?, value: IOHIDValue! ) {
-//        let mySelf = Unmanaged<KeyboardMonitor>.fromOpaque(context!).takeUnretainedValue()
-//        print(value)
-//    }
-    
     static let HandleIOHIDInputValueCallback: IOHIDValueCallback = { context, result, sender, device in
         print("Callback fired!")
         let mySelf = Unmanaged<KeyboardMonitor>.fromOpaque(context!).takeUnretainedValue()
         let elem: IOHIDElement = IOHIDValueGetElement(device)
-        print(elem)
-        print("UsagePage: \(IOHIDElementGetUsagePage(elem)), USAGE: \(IOHIDElementGetUsage(elem))")
+//        print(elem)
         let pressed = IOHIDValueGetIntegerValue(device)
-        print("Coje kurva getIntegerValue: ", pressed)
+        let scancode = IOHIDElementGetUsage(elem)
+        print(scancode)
+        
         
     }
 }
