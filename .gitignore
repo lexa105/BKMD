@@ -71,5 +71,9 @@ python-scripts/venv/
 *.swp
 *.swo
 
+
+#Firmware folders
+platformio/
+
 # Testing different keylogger sofwatre opensource. 
 KeyLogger/
