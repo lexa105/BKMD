@@ -14,9 +14,16 @@
  * 
  * Based on Adafruit Bluefruit LE example and NimBLE examples
  * used code from H2zero, Adafruit, NimBLE-Arduino
+ * 
+ * TODO:
+ * combine all demos
+ * better structure code
+ * redirect serial to diffent UART - this wont work cuz usb hid
+ * look into multicore procces, computing/data bottlenecks and timing
+ * 
  */
 
- 
+
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include "NimBLEDevice.h"
@@ -24,6 +31,11 @@
 #include "USB.h"
 #include "USBHIDMouse.h"
 #include "USBHIDKeyboard.h"
+
+/*TFT display enabled version*/
+#include "display.h"
+
+
 
 #define LED_PIN     21     // Change if your RGB is on a different GPIO
 #define LED_COUNT   1      // Single RGB LED
@@ -122,19 +134,24 @@ void setMode(int mode) {
       break;
     case 1:
       setState(KEYBOARD_MODE);
-      Serial.println("KEYBOARD_MODE"); 
+      display_show_state("Keyboard Mode");
+      display_show_text("Waiting for data...");
       break;
     case 2:
       setState(MOUSE_MODE);
       Serial.println("MOUSE_MODE");
+      display_show_text("Mouse Mode");
+      display_init_crosshair(0,0);
       break;
     case 3:
       setState(MK_MODE);
       Serial.println("MK_MODE");
+      display_show_text("MK Mode");
       break;
     case 4:
       setState(AIRDROP_MODE);
       Serial.println("AIRDROP_MODE");
+      display_show_text("Airdrop Mode");
       break;
     default:
       Serial.printf("Unknown mode: %d\n", mode);
@@ -202,6 +219,7 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
       }
       if(UUID == dataUUID){
         if(currentState == KEYBOARD_MODE){
+          display_show_keyboard_text(value.c_str());
           for(size_t i = 0; i < valueLen; i++){
             Serial.printf("Key: %c\n", value[i]);
             keyboard.print(value[i]);
@@ -216,6 +234,7 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
             int8_t wheel = (int8_t)value[3];
             Serial.printf("Mouse - Buttons: %02X, X: %d, Y: %d, Wheel: %d\n", buttons, x, y, wheel);
             mouse.move(x, y, wheel);
+            display_move_crosshair(x,y);
           }
         }
       }
@@ -253,9 +272,16 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
 /** SETUP */
 void setup() { 
   Serial.begin(115200);
+
   //while(Serial.available() == 0);
   led.begin();
   setState(SETUP_MODE); 
+  
+  //Display init
+  display_init();
+  display_show_state("BKMD Ready");
+  display_show_text("Setup...");
+
   //SERVER SETUP
   NimBLEDevice::init(SERVER_NAME);
   pServer = NimBLEDevice::createServer();
@@ -288,8 +314,9 @@ void setup() {
   pAdvertising->start();
   Serial.printf("Advertising Started\n");
 
-  //keyboard.begin();
-  //USB.begin();
+  display_show_text("Advertising");
+  keyboard.begin();
+  USB.begin();
 }
 
 void loop() {
