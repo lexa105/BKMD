@@ -1,3 +1,22 @@
+/* BKMD PROJECT- BLE Keymoard and Mouse Dongle
+ * 
+ * Creates BLE server with 2 characteristics - util and data.
+ *    Util is for setting mode (keyboard, mouse, mk, airdrop)
+ *    Data is for sending keyboard/mouse data
+ * 
+ * Modes:
+ * Keyboard - sends recieved keyboard data - strokes to USB Host as HID Class
+ * Mouse - sends received mouse data - movements and clicks - dx, dy, buttons, wheel
+ * MK - sends received both keyboard and mouse data
+ * Airdrop - Starts Wifi AP for file transfer, Mounts as USB Mass Storage, Recieved files are stored on SD and available on HOST as USB MSS
+ * 
+ * By DublerIno
+ * 
+ * Based on Adafruit Bluefruit LE example and NimBLE examples
+ * used code from H2zero, Adafruit, NimBLE-Arduino
+ */
+
+ 
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include "NimBLEDevice.h"
@@ -5,8 +24,6 @@
 #include "USB.h"
 #include "USBHIDMouse.h"
 #include "USBHIDKeyboard.h"
-
-
 
 #define LED_PIN     21     // Change if your RGB is on a different GPIO
 #define LED_COUNT   1      // Single RGB LED
