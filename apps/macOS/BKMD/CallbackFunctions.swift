@@ -9,15 +9,31 @@ import Foundation
 import Cocoa
 
 class CallbackFunctions {
+    
     static let HandleIOHIDInputValueCallback: IOHIDValueCallback = { context, result, sender, device in
-        print("Callback fired!")
-        let mySelf = Unmanaged<KeyboardMonitor>.fromOpaque(context!).takeUnretainedValue()
+        
+        let monitor = Unmanaged<KeyboardMonitor>
+            .fromOpaque(context!)
+            .takeUnretainedValue()
+        
         let elem: IOHIDElement = IOHIDValueGetElement(device)
 //        print(elem)
-        let pressed = IOHIDValueGetIntegerValue(device)
-        let scancode = IOHIDElementGetUsage(elem)
-        print(scancode)
+        let isDown = IOHIDValueGetIntegerValue(device) != 0 //Returns 0 released and 1 pressed
+        let scancode = Int(IOHIDElementGetUsage(elem))
         
+        if isDown {
+            //Temporary debug variable
+            let pressedKeys = monitor.pressedKeys.insert(scancode)
+            if pressedKeys.inserted {
+                monitor.pressedKeySequence.append(scancode)
+                print(monitor.pressedKeys)
+            }
+        } else {
+            monitor.pressedKeys.remove(scancode)
+            monitor.pressedKeySequence.removeAll { $0 == scancode }
+            
+        }
         
     }
 }
+

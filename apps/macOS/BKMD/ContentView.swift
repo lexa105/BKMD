@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject var bluetoothManager = BluetoothManager() // 👈 create instance
+    @StateObject var bluetoothManager = BluetoothManager()
     @StateObject var keyboardMonitor = KeyboardMonitor() 
     @State private var selectedPeripheralID: UUID? = nil
 

@@ -14,8 +14,6 @@ struct PeripheralView: View {
     
     @EnvironmentObject var monitor: KeyboardMonitor
     
-
-    
     private var isConnected: Bool {
         manager.connectedPeripheralIDs.contains(peripheral.identifier)
     }

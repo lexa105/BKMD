@@ -13,6 +13,10 @@ final class KeyboardMonitor: ObservableObject {
     var selectedDeviceList: [Int]
     var deviceList = NSArray()
     
+    //Array list of currently Pressed keys
+    var pressedKeys = Set<Int>()
+    var pressedKeySequence: [Int] = []
+    
     @Published var isRunning: Bool = false
     
  
@@ -23,14 +27,11 @@ final class KeyboardMonitor: ObservableObject {
         //Selecting devices to monitor
         selectedDeviceList = [kHIDUsage_GD_Keyboard, kHIDUsage_GD_Keypad]
         
-        
         //Adding devices to the deviceList from selectedDeviceList
         for device in selectedDeviceList {
             deviceList = deviceList.adding(createDeviceMatchingDictionary(inUsagePage: kHIDPage_GenericDesktop, inUsage: device)) as NSArray
         }
-        
-        print("These devices will be monitored: \(deviceList)")
-        
+                
         IOHIDManagerSetDeviceMatchingMultiple(manager, deviceList as CFArray)
         
         let observer = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
@@ -47,8 +48,6 @@ final class KeyboardMonitor: ObservableObject {
         
     }
     
-    
-    
     //For keyboard
     func createDeviceMatchingDictionary(inUsagePage: Int, inUsage: Int) -> CFMutableDictionary{
         let dict:  [String: Int] = [
@@ -60,8 +59,6 @@ final class KeyboardMonitor: ObservableObject {
         //Converting dict to Core Foundation C-Based API
         let resultDict: CFMutableDictionary = dict as! CFMutableDictionary // as! = This proccess will succeed if not crash the whole app.
         return resultDict
-        
-        
     }
     
     func start() {
