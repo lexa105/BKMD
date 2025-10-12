@@ -31,15 +31,21 @@ class CallbackFunctions {
         let scanCode = Int(rawElemUsage)
                 
         if isDown {
-            //Temporary debug variable
-            let pressedKeys = monitor.pressedKeys.insert(scanCode)
-            if pressedKeys.inserted {
-                monitor.pressedKeySequence.append(scanCode)
-                print(monitor.pressedKeys)
+            if !monitor.pressedKeys.contains(scanCode) {
+                monitor.pressedKeys.append(scanCode)
             }
+            let shortcut = monitor.shortcutKeys
+            //DEBUG
+            print(monitor.pressedKeys)
+            if monitor.pressedKeys == shortcut {
+                monitor.toggleWriteMode()
+                //DEBUG
+                print("Write mode: \(monitor.isWriteMode)")
+            }
+            
+            
         } else {
             monitor.pressedKeys.remove(scanCode)
-            monitor.pressedKeySequence.removeAll { $0 == scanCode }
             
         }
     }

@@ -7,16 +7,21 @@
 
 import Foundation
 import IOKit.hid //Low level C API for communication with USB HID.
+import Collections
 
 final class KeyboardMonitor: ObservableObject {
     private var manager: IOHIDManager!
     var selectedDeviceList: [Int]
     var deviceList = NSArray()
     
-    //Array list of currently Pressed keys
-    var pressedKeys = Set<Int>()
-    var pressedKeySequence: [Int] = []
     
+    
+    //Array list of currently Pressed keys
+    var pressedKeys = OrderedSet<Int>()
+    var shortcutKeys: OrderedSet<Int> = [227, 100]
+    
+    
+    @Published var isWriteMode: Bool = false
     @Published var isRunning: Bool = false
     
  
@@ -85,6 +90,11 @@ final class KeyboardMonitor: ObservableObject {
         print("Stopping...")
         IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
         isRunning = false
+    }
+    
+    func toggleWriteMode() {
+        isWriteMode.toggle()
+        
     }
 
 }
