@@ -43,11 +43,11 @@ class CallbackFunctions {
                 print("Write mode: \(monitor.isWriteMode)")
             }
             
-            
         } else {
             monitor.pressedKeys.remove(scanCode)
-            
         }
+        
+        
     }
     
     
