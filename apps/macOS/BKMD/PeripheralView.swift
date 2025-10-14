@@ -11,13 +11,15 @@ import CoreBluetooth
 struct PeripheralView: View {
     @ObservedObject var manager: BluetoothManager
     var peripheral: CBPeripheral
-    
+
     @EnvironmentObject var monitor: KeyboardMonitor
-    
+
+    @State private var showNotConnectedAlert = false
+
     private var isConnected: Bool {
         manager.connectedPeripheralIDs.contains(peripheral.identifier)
     }
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 8) {
@@ -29,8 +31,8 @@ struct PeripheralView: View {
             Spacer()
             VStack() {
                 Text(isConnected ? "Connected" : "Disconnected")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
 
                 Button(isConnected ? "Disconnect" : "Connect") {
                     if isConnected {
@@ -40,18 +42,28 @@ struct PeripheralView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                
+
                 Button("Start Monitoring") {
-                    monitor.start()
+                    if isConnected {
+                        monitor.start()
+                        manager.toggleToWriteMode(peripheral, to: CBUUID(string: "1234"))
+                    } else {
+                        showNotConnectedAlert = true
+                    }
                 }
-                
+                .disabled(!manager.characteristicsReady)
+
                 Button("Stop Monitoring") {
                     monitor.stop()
                 }
+                .disabled(!monitor.isRunning)
             }
-            
+
         }
         .padding(20)
+        .alert("Device not connected. Please connect first.", isPresented: $showNotConnectedAlert) {
+            Button("OK", role: .cancel) {}
+        }
     }
 }
 

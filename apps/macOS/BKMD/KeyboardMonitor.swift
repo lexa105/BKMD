@@ -11,21 +11,28 @@ import Collections
 
 final class KeyboardMonitor: ObservableObject {
     private var manager: IOHIDManager!
+    private 
+    
+    
+    var bluetoothManager: BluetoothManager
     var selectedDeviceList: [Int]
     var deviceList = NSArray()
-    
-    
     
     //Array list of currently Pressed keys
     var pressedKeys = OrderedSet<Int>()
     var shortcutKeys: OrderedSet<Int> = [227, 100]
     
+    //Bool to check whether the isWriteMode active or not. Accessible to the bluetoothManager
+    var isWriteMode: Bool = false
     
-    @Published var isWriteMode: Bool = false
+    
     @Published var isRunning: Bool = false
     
  
-    init() {
+    init(bluetoothManager: BluetoothManager) {
+        //I guess this is constructor like in Java? For Keyboard monitor
+        self.bluetoothManager = bluetoothManager
+        
         //Initiliaze IOHid Manager
         manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         
@@ -94,8 +101,12 @@ final class KeyboardMonitor: ObservableObject {
     
     func toggleWriteMode() {
         isWriteMode.toggle()
-        
     }
+    
+    
+    
+    
+    
 
 }
 

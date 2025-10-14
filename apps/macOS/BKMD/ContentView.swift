@@ -8,10 +8,19 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject var bluetoothManager = BluetoothManager()
-    @StateObject var keyboardMonitor = KeyboardMonitor() 
+    @StateObject var bluetoothManager: BluetoothManager
+    @StateObject var keyboardMonitor: KeyboardMonitor
     @State private var selectedPeripheralID: UUID? = nil
 
+    
+    
+    init() {
+        let manager = BluetoothManager()
+          _bluetoothManager = StateObject(wrappedValue: manager)
+          _keyboardMonitor = StateObject(wrappedValue:
+          KeyboardMonitor(bluetoothManager: manager))
+    }
+    
     var body: some View {
         NavigationSplitView {
             List(bluetoothManager.peripherals, id: \.identifier, selection: $selectedPeripheralID) {
