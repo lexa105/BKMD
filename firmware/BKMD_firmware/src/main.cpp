@@ -32,49 +32,52 @@
 #include "USBHIDMouse.h"
 #include "USBHIDKeyboard.h"
 
-/*TFT display enabled version*/
-#include "display.h"
+#include "bkmd_device.h"
+#include "display.h" //works only for -D HAS_TFT
 
 
-
-#define LED_PIN     21     // Change if your RGB is on a different GPIO
-#define LED_COUNT   1      // Single RGB LED
-#define LED_BLINK_DELAY 250
-
-#define SERVER_NAME "BLE Universal Dongle"
 
 Adafruit_NeoPixel led(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-
-NimBLEUUID serviceUUID("B00B");
-NimBLEUUID utilUUID("1234");
-NimBLEUUID dataUUID("1235");
 
 USBHIDKeyboard keyboard;
 USBHIDMouse mouse;
 
 static NimBLEServer* pServer;
 
-enum DeviceState {
- SETUP_MODE,
- DATA_RECIEVED,
- KEYBOARD_MODE,
- MOUSE_MODE,
- MK_MODE,
- AIRDROP_MODE,
- BLE_CONNECTION_LOST,
- BLE_CONNECTED
-};
-
-void setLED(uint8_t r, uint8_t g, uint8_t b);
-void setLEDState(DeviceState s);
-void setMode(int mode);
-void setState(DeviceState s);
+Display tft; // Display object
 
 DeviceState currentState = SETUP_MODE;
-
+//change variable and led color
 void setState(DeviceState s) {
   currentState = s;
   setLEDState(s);
+  setDisplayState(s);
+}
+
+void setDisplayState(DeviceState s) {
+  switch (s) {
+    case SETUP_MODE:
+      tft.display_show_state("SETUP MODE");
+      break;
+    case MOUSE_MODE:
+      tft.display_show_state("MOUSE MODE");
+      break;
+    case MK_MODE:
+      tft.display_show_state("MOUSE & KEYBOARD MODE");
+      break;
+    case AIRDROP_MODE:
+      tft.display_show_state("AIRDROP MODE");
+      break;
+    case KEYBOARD_MODE:
+      tft.display_show_state("KEYBOARD MODE");
+      break;
+    case BLE_CONNECTION_LOST:
+      tft.display_show_state("BLE CONNECTION LOST");
+      break;
+    case BLE_CONNECTED:
+      tft.display_show_state("BLE CONNECTED");
+      break;
+  }
 }
 
 // Change the LED color based on the device state
@@ -82,9 +85,6 @@ void setLEDState(DeviceState s) {
   switch (s) {
     case SETUP_MODE:
       setLED(255, 255, 0);   // Yellow
-      break;
-    case DATA_RECIEVED:
-      setLED(0, 0, 255);     // Blue
       break;
     case MOUSE_MODE:
       setLED(255, 0, 255);   // Magenta
@@ -107,54 +107,45 @@ void setLEDState(DeviceState s) {
   }
 }
 
-
-
-/**
- * Change the LED color
- */
+//Change the LED color
 void setLED(uint8_t r, uint8_t g, uint8_t b) {
   led.setPixelColor(0, led.Color(r, g, b));
   led.show();
 }
 /*
 State bude nadmoznina pro mode
-0x00 	SETUP_MODE
-0x01	KEYBOARD_MODE
-0x02	MOUSE_MODE
-0x03	MnK_MODE
-0x04	AIRDROP_MODE
+0x00 	(0) SETUP_MODE
+0x01	(1) KEYBOARD_MODE
+0x02	(2) MOUSE_MODE
+0x03	(3) MnK_MODE
+0x04	(4) AIRDROP_MODE
 */
 //bude to fungovat
-void setMode(int mode) {
+void setMode_fromByte(uint8_t mode) {
   
   switch (mode) {
     case 0:
       setState(SETUP_MODE);
-      Serial.println("SETUP_MODE");
+      tft.display_show_debug("change mode to setup");
       break;
     case 1:
       setState(KEYBOARD_MODE);
-      display_show_state("Keyboard Mode");
-      display_show_text("Waiting for data...");
+      tft.display_show_debug("change mode to keyboard");
       break;
     case 2:
       setState(MOUSE_MODE);
-      Serial.println("MOUSE_MODE");
-      display_show_text("Mouse Mode");
-      display_init_crosshair(0,0);
+      tft.display_show_debug("change mode to mouse");
       break;
     case 3:
       setState(MK_MODE);
-      Serial.println("MK_MODE");
-      display_show_text("MK Mode");
+      tft.display_show_debug("Changed mode to MnK");
       break;
     case 4:
       setState(AIRDROP_MODE);
-      Serial.println("AIRDROP_MODE");
-      display_show_text("Airdrop Mode");
+      tft.display_show_debug("changed mode to airdrop");
       break;
     default:
-      Serial.printf("Unknown mode: %d\n", mode);
+      tft.display_show_debug("unknown mode");
       setState(SETUP_MODE); // Default to SETUP_MODE for unknown values
       break;
   }
@@ -170,6 +161,7 @@ class ServerCallbacks : public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
         Serial.printf("Client address: %s\n", connInfo.getAddress().toString().c_str());
         setState(BLE_CONNECTED);
+        tft.display_show_debug("connected");
         isConnected = true;
 
         /**
@@ -209,35 +201,26 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks {
       NimBLEUUID UUID = pCharacteristic->getUUID();
       std::string value =  pCharacteristic->getValue();//string as byte array - je to ascii - 1 byte 1(string) = 49(dec)
       size_t valueLen = pCharacteristic->getLength();
+
       Serial.printf("%s : onWrite(), value: %s, len: %d\n",
                       UUID.toString().c_str(),
                       value.c_str(),
                       valueLen);
       lastWrite = millis(); //for led blink
+
+      //display_recieved_data(value.c_str(), valueLen); //show on display
+
       if(UUID == utilUUID){
-       setMode(value[0]); //first byte is mode
+       setMode_fromByte(value[0]); //first byte is mode
       }
       if(UUID == dataUUID){
         if(currentState == KEYBOARD_MODE){
-          display_show_keyboard_text(value.c_str());
-          for(size_t i = 0; i < valueLen; i++){
-            Serial.printf("Key: %c\n", value[i]);
-            keyboard.print(value[i]);
-          }
+          keyboard_data_handle(value.c_str(), valueLen);
         }
-        if(currentState == MOUSE_MODE){
-          //first byte is buttons, second x, third y, fourth wheel
-          if(valueLen >= 4){
-            uint8_t buttons = value[0];
-            int8_t x = (int8_t)value[1];
-            int8_t y = (int8_t)value[2];
-            int8_t wheel = (int8_t)value[3];
-            Serial.printf("Mouse - Buttons: %02X, X: %d, Y: %d, Wheel: %d\n", buttons, x, y, wheel);
-            mouse.move(x, y, wheel);
-            display_move_crosshair(x,y);
-          }
+        else if(currentState == MOUSE_MODE){
+          mouse_data_handle(value.c_str(), valueLen);
         }
-      }
+      } 
     }
     
 
@@ -275,13 +258,13 @@ void setup() {
 
   //while(Serial.available() == 0);
   led.begin();
-  setState(SETUP_MODE); 
   
   //Display init
-  display_init();
-  display_show_state("BKMD Ready");
-  display_show_text("Setup...");
+  tft.display_init();
+  tft.display_show_debug("Setup...");
 
+
+    
   //SERVER SETUP
   NimBLEDevice::init(SERVER_NAME);
   pServer = NimBLEDevice::createServer();
@@ -314,7 +297,7 @@ void setup() {
   pAdvertising->start();
   Serial.printf("Advertising Started\n");
 
-  display_show_text("Advertising");
+  tft.display_show_debug("Advertising");
   keyboard.begin();
   USB.begin();
 }
@@ -326,3 +309,38 @@ void loop() {
   }
  
 }
+
+void mouse_data_handle(const char* value, size_t valueLen) {
+ //first byte is buttons, second x, third y, fourth wheel
+          if(valueLen >= 4){
+            uint8_t buttons = value[0];
+            int8_t x = (int8_t)value[1];
+            int8_t y = (int8_t)value[2];
+            int8_t wheel = (int8_t)value[3];
+            Serial.printf("Mouse - Buttons: %02X, X: %d, Y: %d, Wheel: %d\n", buttons, x, y, wheel);
+            mouse.move(x, y, wheel);
+          }
+
+}
+void display_recieved_data(const char* value, size_t valueLen){
+  tft.display_show_debug("joo tohle jsem jeste nedodelal");
+}
+
+//recieved data will be int32_t Usage ID of one key
+void keyboard_data_handle(const char* value, size_t valueLen){
+  //display lenght
+  tft.display_show_debug("Data len:");
+  tft.display_show_debug(String(valueLen).c_str());
+  if(valueLen >= 4){
+    int32_t usageID = *((int32_t*)value); //pouze prvni 4 byty
+    tft.display_show_debug(String(usageID).c_str());
+    if(usageID != 0){
+      keyboard.press(usageID);
+      delay(10); //tohle je potreba jinak to nefunguje spolehlive
+      keyboard.release(usageID);
+    }
+  } else {
+    tft.display_show_debug("unknown data");
+  }
+}
+//poslu hex 10 00 00 00 a printe to 00 00 00 10 coz je naopak takze je to nejaky divny
