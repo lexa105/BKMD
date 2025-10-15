@@ -11,7 +11,6 @@ import Collections
 
 final class KeyboardMonitor: ObservableObject {
     private var manager: IOHIDManager!
-    private 
     
     
     var bluetoothManager: BluetoothManager
@@ -97,10 +96,16 @@ final class KeyboardMonitor: ObservableObject {
         print("Stopping...")
         IOHIDManagerUnscheduleFromRunLoop(manager, CFRunLoopGetCurrent(), CFRunLoopMode.defaultMode.rawValue)
         isRunning = false
+        toggleWriteMode()
     }
     
     func toggleWriteMode() {
         isWriteMode.toggle()
+    }
+    
+    
+    func sendKeys(_ keyUsage: Int) {
+        bluetoothManager.sendUsageKeyInt(keyUsage)
     }
     
     
