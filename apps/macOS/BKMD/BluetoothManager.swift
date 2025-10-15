@@ -89,6 +89,41 @@ final class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelega
         }
     }
     
+    func sendUsageKeyInt(_ keyUsageInt: Int) {
+        // Convert the Int to UInt8 safely
+        guard keyUsageInt >= 0 && keyUsageInt <= 255 else {
+            print("⚠️ keyUsageInt out of UInt8 range (0–255)")
+            return
+        }
+        let value = UInt8(keyUsageInt)
+        let payload = Data([value])
+
+        // Go through all connected peripherals
+        for peripheralID in connectedPeripheralIDs {
+            guard let chars = peripheralCharacteristics[peripheralID],
+                  let characteristic = chars.first(where: { $0.uuid.uuidString == "1235" }) else {
+                print("⚠️ No matching characteristic 1235 for peripheral \(peripheralID)")
+                continue
+            }
+
+            // Try to get the actual peripheral object
+            guard let peripheral = peripherals.first(where: { $0.identifier == peripheralID }) else {
+                print("⚠️ Peripheral not found for ID \(peripheralID)")
+                continue
+            }
+
+            // Send the data
+            if characteristic.properties.contains(.writeWithoutResponse) {
+                peripheral.writeValue(payload, for: characteristic, type: .withoutResponse)
+                print("➡️ Sent key \(value) (no response) to \(characteristic.uuid)")
+            } else if characteristic.properties.contains(.write) {
+                peripheral.writeValue(payload, for: characteristic, type: .withResponse)
+                print("➡️ Sent key \(value) (with response) to \(characteristic.uuid)")
+            } else {
+                print("⚠️ Characteristic \(characteristic.uuid) not writable")
+            }
+        }
+    }
     
     //Bluetooth Core is event-driven, whenever event happened it calls specific function.
     // 1️⃣ Called when Bluetooth state changes

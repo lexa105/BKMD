@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreBluetooth
 
 struct ContentView: View {
     @StateObject var bluetoothManager: BluetoothManager
@@ -23,12 +24,12 @@ struct ContentView: View {
     
     var body: some View {
         NavigationSplitView {
-            List(bluetoothManager.peripherals, id: \.identifier, selection: $selectedPeripheralID) {
-                peripheral in Text(peripheral.name ?? "Unnamed Device")
+            List(peripheralsWithNames, id: \.identifier, selection: $selectedPeripheralID) { peripheral in
+                Text(peripheral.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
             }
         } detail: {
             if let id = selectedPeripheralID,
-               let peripheral = bluetoothManager.peripherals.first(where: { $0.identifier == id}) {
+               let peripheral = peripheralsWithNames.first(where: { $0.identifier == id}) {
                 PeripheralView(manager: bluetoothManager, peripheral: peripheral)
                     .environmentObject(keyboardMonitor)
                  Spacer()
@@ -48,4 +49,15 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+}
+
+private extension ContentView {
+    var peripheralsWithNames: [CBPeripheral] {
+        bluetoothManager.peripherals.filter { peripheral in
+            guard let name = peripheral.name?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+                return false
+            }
+            return !name.isEmpty
+        }
+    }
 }

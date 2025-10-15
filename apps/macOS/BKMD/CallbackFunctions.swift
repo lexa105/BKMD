@@ -42,16 +42,12 @@ class CallbackFunctions {
                 //DEBUG
                 print("Write mode: \(monitor.isWriteMode)")
             }
+            monitor.sendKeys(scanCode)
             
         } else {
             monitor.pressedKeys.remove(scanCode)
         }
         
-        
     }
     
-    
-    
-    
 }
-
