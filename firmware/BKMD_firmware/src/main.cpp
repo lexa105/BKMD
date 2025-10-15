@@ -300,6 +300,8 @@ void setup() {
   tft.display_show_debug("Advertising");
   keyboard.begin();
   USB.begin();
+
+ 
 }
 
 void loop() {
@@ -307,8 +309,8 @@ void loop() {
     setLED(0,0,millis() - lastWrite < 250 ? 255 : 0); 
     setLEDState(currentState); 
   }
- 
 }
+
 
 void mouse_data_handle(const char* value, size_t valueLen) {
  //first byte is buttons, second x, third y, fourth wheel
@@ -326,21 +328,26 @@ void display_recieved_data(const char* value, size_t valueLen){
   tft.display_show_debug("joo tohle jsem jeste nedodelal");
 }
 
-//recieved data will be int32_t Usage ID of one key
+//recieve data uint8_t usageID
 void keyboard_data_handle(const char* value, size_t valueLen){
   //display lenght
-  tft.display_show_debug("Data len:");
-  tft.display_show_debug(String(valueLen).c_str());
-  if(valueLen >= 4){
-    int32_t usageID = *((int32_t*)value); //pouze prvni 4 byty
+  if(valueLen == 1){
+    uint8_t usageID = (uint8_t)value[0];
     tft.display_show_debug(String(usageID).c_str());
     if(usageID != 0){
-      keyboard.press(usageID);
+      keyboard.pressRaw(usageID);
       delay(10); //tohle je potreba jinak to nefunguje spolehlive
-      keyboard.release(usageID);
+      keyboard.releaseRaw(usageID);
     }
   } else {
     tft.display_show_debug("unknown data");
   }
 }
+
+void keyboard_usageID_test(uint8_t usageID){
+  keyboard.pressRaw(usageID);
+  delay(10); //tohle je potreba jinak to nefunguje spolehlive
+  keyboard.releaseRaw(usageID);
+}
+//testovaci funkce - posle jedno stisknuti daneho usageID
 //poslu hex 10 00 00 00 a printe to 00 00 00 10 coz je naopak takze je to nejaky divny

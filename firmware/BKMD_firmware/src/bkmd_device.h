@@ -32,3 +32,4 @@ void setState(DeviceState s);
 void display_recieved_data(const char* value, size_t valueLen);
 void keyboard_data_handle(const char* value, size_t valueLen);
 void mouse_data_handle(const char* value, size_t valueLen);
+void keyboard_usageID_test(uint8_t usageID);
