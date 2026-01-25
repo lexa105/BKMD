@@ -2,7 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-#include "ble_server
+#include "ble_server.h"
 //nclude "utils/Logger.h"
 
 static QueueHandle_t bleRxQ;
@@ -19,7 +19,7 @@ void setup() {
 
     // start BLE
     ble = new BleServer(bleRxQ);
-    ble->begin();
+    ble->start();
 
     // start app task(s), pass queues
     //ppTask::begin(bleRxQ /*, other queues... */);

@@ -12,8 +12,13 @@
 
 //#include "utils/Logger.h"   // optional
 
-//ble server class
-BleServer::BleServer(QueueHandle_t rxQueue) : _rxQueue(rxQueue) {}
+//ble server Constructor
+BleServer::BleServer(QueueHandle_t rxQueue)
+: _rxQueue(rxQueue)
+, _serverCallbacks()
+, _dataCallbacks(rxQueue)   
+, _utilCallbacks()
+{}
 
 //Methodes defined outside the class- not a fan
 // -------------------- BLE setup --------------------

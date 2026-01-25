@@ -28,8 +28,8 @@ class BleServer {
 public:
   explicit BleServer(QueueHandle_t rxQueue);
   void start();            // init + start advertising
-  void end();              // optional
-  bool enqueueFromCallback(const uint8_t* data, size_t len); // called by callbacks
+  //void end();              // optional
+  //bool enqueueFromCallback(const uint8_t* data, size_t len); // called by callbacks
 
 private:
   QueueHandle_t _rxQueue;
@@ -43,8 +43,6 @@ private:
   uint32_t _seq = 0;
 
   // callback objects live as members => safe lifetime
-  class ServerCbs;
-  class RxCharCbs;
 
   ServerCallbacks _serverCallbacks;
   CharacteristicDataCallbacks _dataCallbacks;
