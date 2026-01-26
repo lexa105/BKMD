@@ -3,7 +3,12 @@
 #include "freertos/queue.h"
 
 #include "ble_server.h"
+
 //nclude "utils/Logger.h"
+
+#include "USB.h"
+#include "USBHIDMouse.h"
+#include "USBHIDKeyboard.h"
 
 static QueueHandle_t bleRxQ;
 
@@ -16,21 +21,26 @@ void hid_decode(BlePacket pkt);
 void util_decode(BlePacket pkt);
 void startTasks();
 void DecoderTask(void*);
+USBHIDKeyboard keyboard;
+USBHIDMouse mouse;
 
 void setup() {
-    Serial.begin(115200);
+  Serial.begin(115200);
 
-    //loger::begin(); // creates logQ + logger task
+  //loger::begin(); // creates logQ + logger task
 
-    //Create BLE recieved queue
-    bleRxQ = xQueueCreate(16, sizeof(BlePacket));
+  //Create BLE recieved queue
+  bleRxQ = xQueueCreate(16, sizeof(BlePacket));
 
-    // start BLE
-    ble = new BleServer(bleRxQ);
-    ble->start();
+  // start BLE
+  ble = new BleServer(bleRxQ);
+  ble->start();
 
-    //start decoder task
-    startTasks();
+  keyboard.begin();
+  USB.begin(); // tohle nejak vypne serial1 - uart ne ? takze logger task bude na serial2
+
+  //start decoder task
+  startTasks();
     
 }
 
@@ -71,9 +81,29 @@ void loop() {
   //vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
+
+//TO CHANGE - WAITING FOR LEXA CODE
+//combine mouse nad keyboad packet? why not
+//keyboard send from PC both PRESS and RELASE PACKET
 void hid_decode(BlePacket pkt){
+  uint8_t usageID = pkt.data[0];
   
+  //tft.display_show_debug(String(usageID).c_str());
+
+  if(usageID != 0){
+    keyboard.pressRaw(usageID);
+    //delay(10); //tohle zmizi az se bude posilat i release
+    vTaskDelay(10); 
+    keyboard.releaseRaw(usageID);
+  }
+
+  //tft.display_show_debug("unknown data");
+  
+  //mouse handle 
+
 }
+//clipboard feature
+
 
 void util_decode(BlePacket pkt){
 

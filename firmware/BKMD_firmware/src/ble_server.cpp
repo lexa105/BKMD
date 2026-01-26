@@ -39,7 +39,7 @@ void BleServer::start() {
     UTIL_UUID,
     NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
     );
-    pUtilCharacteristic->setValue("Setup");
+    pUtilCharacteristic->setValue("01");
     pUtilCharacteristic->setCallbacks(&_utilCallbacks); 
 
     //DATA CHAR
