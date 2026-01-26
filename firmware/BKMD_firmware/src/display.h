@@ -3,8 +3,19 @@
 *Display class for debug
 *
 */
+#include <Arduino.h>
 
 #pragma once
+
+struct UiState {
+  char big[32];       // current state string
+  char text[64];      // small text
+  char debug[96];     // debug line
+  uint32_t counters[4];
+  uint32_t lastRxMs;
+  uint16_t lastLen;
+  uint8_t  lastPreview[16];
+};
 
 
 class Display
