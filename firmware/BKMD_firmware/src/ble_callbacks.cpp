@@ -63,6 +63,7 @@ void CharacteristicDataCallbacks :: onWrite(NimBLECharacteristic* pCharacteristi
 
     //Create Ble Packet and send to queue
     BlePacket pkt;
+    pkt.callback = 0;
     pkt.t_ms = millis();
     pkt.len  = (n > BLE_MAX_PAYLOAD) ? BLE_MAX_PAYLOAD : (uint16_t)n;
     memcpy(pkt.data, value.data(), pkt.len);

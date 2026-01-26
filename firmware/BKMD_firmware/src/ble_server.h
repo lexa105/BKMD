@@ -6,14 +6,17 @@
 #include "ble_callbacks.h"
 
 //constexpr for initcialization during compile
+//MTU max packet size
 constexpr size_t BLE_MAX_PAYLOAD = 128;
 
+//packet for queue inter communication
 struct BlePacket {
-  uint32_t seq;
   uint32_t t_ms;
   uint16_t len;
+  uint8_t callback;
   uint8_t  data[BLE_MAX_PAYLOAD];
 };
+
 
 
 // Keep UUIDs in one place

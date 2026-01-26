@@ -17,7 +17,7 @@ BleServer::BleServer(QueueHandle_t rxQueue)
 : _rxQueue(rxQueue)
 , _serverCallbacks()
 , _dataCallbacks(rxQueue)   
-, _utilCallbacks()
+, _utilCallbacks(rxQueue)
 {}
 
 //Methodes defined outside the class- not a fan
