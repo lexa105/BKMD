@@ -20,6 +20,7 @@ We expect major updates and upgrades, to early final product to be made in 2026.
 Our goal is to create universal USB dongle that would allow you to control different PC over WPAN.
 We use ESP32S3 as it offers HID and BLE peripherals. 
 
+https://www.aliexpress.com/item/1005009024098181.html?spm=a2g0o.detail.0.0.7031xi6bxi6b8k&productId=1005009024098181&pdp_ext_f=%7B%22tabScene%22%3A%22retail%22%2C%22sku_id%22%3A12000047619166787%2C%22origProductId%22%3A%221005009024098181%22%7D&#nav-description
 
 ## Notes
 
