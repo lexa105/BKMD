@@ -46,7 +46,7 @@ USBHIDMouse mouse;
 
 //to clean - move to dedicated class/header
 bool hid_decode(BlePacket pkt);
-void util_decode(BlePacket pkt);
+bool util_decode(BlePacket pkt);
 static void ui_set_debug(const char* s);
 static void ui_set_state(const char* s);
 static void ui_toggle_airdrop();
@@ -71,6 +71,13 @@ void setup() {
   startTasks();
     
 }
+
+//TEMPORARY SOLUTION for keyboard release
+static TimerHandle_t kbReleaseTimer = nullptr;
+static void kbReleaseTimerCb(TimerHandle_t) {
+  keyboard.releaseAll();
+}
+static inline void scheduleKeyboardRelease(uint32_t delayMs);
 
 void startTasks() {
   uiMtx = xSemaphoreCreateMutex();
@@ -105,6 +112,17 @@ void startTasks() {
   &buttonTaskHandle, // handle (optional)
   1                  // core 1
   );
+
+
+  //Temporary
+  kbReleaseTimer = xTimerCreate(
+  "kbRel",
+  pdMS_TO_TICKS(50),
+  pdFALSE,        // one-shot
+  nullptr,
+  kbReleaseTimerCb
+);
+
 }
 
 
@@ -120,20 +138,21 @@ void DecoderTask(void*) {
         
         // 2. Update UI state
         if (ok) {
-          ui_set_state("CONNECTED");
-          ui_set_debug("RX OK");
+          ui_set_debug("HID OK");
         } else {
-          ui_set_state("ERROR");
-          ui_set_debug("BAD PACKET");
+          ui_set_debug("HID BAD");
         }
-
-
-
-
       } else { //else if(callback == 1)
-        util_decode(pkt);
+        bool ok = util_decode(pkt);
+         if (ok) {
+          ui_set_debug("UTIL OK");
+        } else {
+          ui_set_debug("UTIL BAD"); 
+        }
       }
     }
+
+    //
     if (millis() - last > 5000) {
       last = millis();
       Serial.printf("Decoder stack HW=%u\n", uxTaskGetStackHighWaterMark(nullptr));
@@ -220,12 +239,12 @@ void ButtonTask(void*) {
           ui_toggle_airdrop();
         } else{
           ui_set_debug("SHORT RELEASED");
+          keyboard.print("Tesst Clipboard vice klaves zmacknutych jak to bude lexa implemenvovat to jsem zvedavej1234{}[]!@#$"); //funguje cele
         }
       }
     }
   }
 }
-
 
 void loop() {
   //vTaskDelay(pdMS_TO_TICKS(1000));
@@ -237,25 +256,42 @@ void loop() {
 //keyboard send from PC both PRESS and RELASE PACKET
 bool hid_decode(BlePacket pkt){
   uint8_t usageID = pkt.data[0];
-  
-  //tft.display_show_debug(String(usageID).c_str());
-
   if(usageID != 0){
     keyboard.pressRaw(usageID);
-    //delay(10); //tohle zmizi az se bude posilat i release
-    vTaskDelay(10); 
-    keyboard.releaseRaw(usageID);
-  }
+
+    
+    //tohle zmizi az se bude posilat i release //delay
+    scheduleKeyboardRelease(200); 
+
+  } //else if(usageID n Release){ keyboard.releaseRaw(usageID);}
   return true;
-  //tft.display_show_debug("unknown data");
   
   //mouse handle 
 
 }
-//clipboard feature
 
+//handles more different packets
+//- clipboard
+//- setup
+bool util_decode(BlePacket pkt){
+  const char packetType = pkt.data[0];
+  if(packetType == '1') {
+    ui_toggle_airdrop();
+    return true;
+  } else if(packetType == 'C') { //CLIPBOARD PASTE
+    if (pkt.len <= 1) return false;
 
-void util_decode(BlePacket pkt){
+    char text[BLE_MAX_PAYLOAD]; 
+    size_t n = pkt.len - 1;
+
+    memcpy(text, &pkt.data[1], n);
+    text[n] = '\0';               // should be on end of string ?
+
+    keyboard.print(text);
+    return true;
+  } else{
+    return false;
+  }
 
 }
 
@@ -287,5 +323,13 @@ static void ui_toggle_airdrop() {
   xSemaphoreGive(uiMtx);
 
   xEventGroupSetBits(uiEv, UI_EV_STATE);
+}
+
+//temporary
+static inline void scheduleKeyboardRelease(uint32_t delayMs) {
+  // restart timer so repeated calls delay the release (common desired behavior)
+  xTimerStop(kbReleaseTimer, 0);
+  xTimerChangePeriod(kbReleaseTimer, pdMS_TO_TICKS(delayMs), 0);
+  xTimerStart(kbReleaseTimer, 0);
 }
 
