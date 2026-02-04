@@ -15,7 +15,7 @@
 //ble server Constructor
 BleServer::BleServer(QueueHandle_t rxQueue)
 : _rxQueue(rxQueue)
-, _serverCallbacks()
+, _serverCallbacks(*this)
 , _dataCallbacks(rxQueue)   
 , _utilCallbacks(rxQueue)
 {}
@@ -50,20 +50,58 @@ void BleServer::start() {
     pDataCharacteristic->setValue("NULL");
     pDataCharacteristic->setCallbacks(&_dataCallbacks); //callbacks. muzu mit vic ruznych? tho
 
-   
-   
+  
+  
     /** Start the services when finished creating all Characteristics and Descriptors */
     pService->start();
 
-    /** Create an advertising instance and add the services to the advertised data */
-    NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
-    pAdvertising->setName("BLE-Dongle");
-    pAdvertising->addServiceUUID(pService->getUUID());
-    pAdvertising->enableScanResponse(true);
-    pAdvertising->start();
+    /** Store an advertising instance and add the services to the advertised data */
+    _adv = NimBLEDevice::getAdvertising();
+    _adv->setName("BLE-Dongle");
+    _adv->addServiceUUID(pService->getUUID());
+    _adv->enableScanResponse(true);
+    _adv->start();
+
+    _started = true;
+
 
   //option to turn of advert after connection ? 
   //LOG("advertising started")
   Serial.printf("Advertising Started\n");
    
+}
+
+ // Keep stack initialized; do not deinit/free. This is "soft" stop.
+void BleServer::soft_stop(bool disconnectClient) {
+  _advEnabled = false;
+  if (!_started) return;
+
+  NimBLEDevice::stopAdvertising();
+  if (_adv) _adv->stop();
+
+  if (disconnectClient && _connected && pServer && _connHandle != 0xFFFF) {
+    pServer->disconnect(_connHandle);
+  }
+  
+}
+
+
+void BleServer::resume() {
+  // Only makes sense if BLE stack was started before
+  if (!_started) return;
+
+  // If we are already connected, do not advertise
+  if (_connected) return;
+
+  _advEnabled = true;
+  // Make sure we have an advertising object
+  if (_adv == nullptr) {
+    _adv = NimBLEDevice::getAdvertising();
+    if (_adv == nullptr) return;
+  }
+
+  // Start advertising again (idempotent enough for typical NimBLE usage)
+  _adv->start();
+  // Alternatively:
+  // NimBLEDevice::startAdvertising();
 }

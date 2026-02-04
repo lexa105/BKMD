@@ -56,13 +56,15 @@ void setup() {
   Serial.begin(115200);
 
   //loger::begin(); // creates logQ + logger task
-
+  
   //Create BLE recieved queue
   bleRxQ = xQueueCreate(16, sizeof(BlePacket));
 
   // start BLE
   ble = new BleServer(bleRxQ);
   ble->start();
+
+  gUi.AirDropOn = false;
 
   keyboard.begin();
   USB.begin(); // tohle nejak vypne serial1 - uart ne ? takze logger task bude na serial2
@@ -161,6 +163,7 @@ void DecoderTask(void*) {
   }
 }
 
+//DisplayTask + MODE handle
 void DisplayTask(void* arg) {
   Display disp;
   disp.display_init();
@@ -188,8 +191,10 @@ void DisplayTask(void* arg) {
         //disp.display_show_state(snap.big)
         if (snap.AirDropOn) {
           disp.display_show_state("AIRDROP ON");
+          ble->soft_stop(true);
         } else {
           disp.display_show_state("AIRDROP OFF");
+          ble->resume();
         }
       }
     if (bits & UI_EV_TEXT)  disp.display_show_text(snap.text);
@@ -257,14 +262,15 @@ void loop() {
 bool hid_decode(BlePacket pkt){
   uint8_t usageID = pkt.data[0];
   if(usageID != 0){
-    keyboard.pressRaw(usageID);
-
+    size_t pressed = keyboard.pressRaw(usageID);
     
     //tohle zmizi az se bude posilat i release //delay
     scheduleKeyboardRelease(200); 
 
+    if(pressed >= 1){return true;}
+    else {return false;}
   } //else if(usageID n Release){ keyboard.releaseRaw(usageID);}
-  return true;
+  return false;
   
   //mouse handle 
 

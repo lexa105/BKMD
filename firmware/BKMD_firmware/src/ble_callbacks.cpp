@@ -9,42 +9,39 @@
 //SERVER
 //Herited classes from NimBLE Callbacks
 //only method implementation - class definition in header
-void ServerCallbacks :: onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) {
-    Serial.printf("Client address: %s\n", connInfo.getAddress().toString().c_str());
-    
-    //isConnected = true;
+void ServerCallbacks::onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) {
+  Serial.printf("Client address: %s\n", connInfo.getAddress().toString().c_str());
 
-    //LOGD("BLE", 0, "Connected");
-        
-    /**
-     *  We can use the connection handle here to ask for different connection parameters.
-     *  Args: connection handle, min connection interval, max connection interval
-     *  latency, supervision timeout.
-     *  Units; Min/Max Intervals: 1.25 millisecond increments.
-     *  Latency: number of intervals allowed to skip.
-     *  Timeout: 10 millisecond increments.
-     */
-    pServer->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 180);
+  _owner.setConnected(connInfo.getConnHandle());
+
+  pServer->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 180);
 }
 
-void ServerCallbacks :: onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason)  {
+void ServerCallbacks::onDisconnect(NimBLEServer*, NimBLEConnInfo&, int)  {
     Serial.printf("Client disconnected - start advertising\n");
 
-    NimBLEDevice::startAdvertising();
-    //isConnected = false;
+    _owner.setDisconnected();
+
+    //check if entering soft stop or connection lost
+    if (_owner.advEnabled()) {
+        NimBLEDevice::startAdvertising();
+    } else {
+        Serial.println("Advertising suppressed (soft stop)");
+    }
 
 }
 
-void ServerCallbacks :: onMTUChange(uint16_t MTU, NimBLEConnInfo& connInfo)  {
-    Serial.printf("MTU updated: %u for connection ID: %u\n", MTU, connInfo.getConnHandle());
-} // instance of ServerCallback, derivered from NimBLES...
+void ServerCallbacks::onMTUChange(uint16_t MTU, NimBLEConnInfo& connInfo)  {
+  Serial.printf("MTU updated: %u for connection ID: %u\n", MTU, connInfo.getConnHandle());
+}
+
+
+
 
 //DATA
 //WRITE CALL BACK
 /** Handler class for characteristic actions */
-
     //constructor - abych dostal pointer na queue teto class
-
 void CharacteristicDataCallbacks :: onRead(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo)  {
     Serial.printf("%s : onRead(), value: %s\n",
                     pCharacteristic->getUUID().toString().c_str(),
@@ -99,6 +96,8 @@ void CharacteristicDataCallbacks :: onSubscribe(NimBLECharacteristic* pCharacter
 
     Serial.printf("%s\n", str.c_str());
 }
+
+
 
 
 //WRITE CALL BACK

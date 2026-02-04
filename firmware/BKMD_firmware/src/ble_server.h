@@ -31,8 +31,15 @@ class BleServer {
 public:
   explicit BleServer(QueueHandle_t rxQueue);
   void start();            // init + start advertising
-  //void end();              // optional
-  //bool enqueueFromCallback(const uint8_t* data, size_t len); // called by callbacks
+
+  //soft start
+  void soft_stop(bool disconnectClient /* = true */);
+  void resume();
+  void setConnected(uint16_t connHandle) { _connected = true; _connHandle = connHandle; }
+  void setDisconnected() { _connected = false; _connHandle = 0xFFFF; }
+  bool isStarted() const { return _started; }
+  void setAdvEnabled(bool en) { _advEnabled = en; } //write private variable
+  bool advEnabled() const { return _advEnabled; }//read private variable
 
 private:
   QueueHandle_t _rxQueue;
@@ -50,4 +57,12 @@ private:
   ServerCallbacks _serverCallbacks;
   CharacteristicDataCallbacks _dataCallbacks;
   CharacteristicUtilCallbacks _utilCallbacks;
+
+  //soft stop implementation
+  bool _started = false;
+  bool _connected = false;
+  uint16_t _connHandle = 0xFFFF;
+  NimBLEAdvertising* _adv = nullptr;
+  bool _advEnabled = true;   // when false, onDisconnect must NOT restart advertising
+
 };
