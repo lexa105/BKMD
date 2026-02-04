@@ -1,0 +1,16 @@
+{
+  "name": "bkmd-app",
+  "version": "1.0.0",
+  "description": "BKMD developed in Electron",
+  "license": "ISC",
+  "author": "Lexa Tuan",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "electron": "^40.1.0"
+  }
+}
