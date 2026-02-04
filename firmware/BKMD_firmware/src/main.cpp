@@ -30,7 +30,8 @@ void DisplayTask(void*);
 void ButtonTask(void*);
 
 //to learn
-UiState gUi;
+
+UiState gUi; //mutexed global instance 
 SemaphoreHandle_t uiMtx;
 EventGroupHandle_t uiEv;
 enum : EventBits_t {
@@ -48,6 +49,8 @@ bool hid_decode(BlePacket pkt);
 void util_decode(BlePacket pkt);
 static void ui_set_debug(const char* s);
 static void ui_set_state(const char* s);
+static void ui_toggle_airdrop();
+
 
 void setup() {
   Serial.begin(115200);
@@ -162,10 +165,16 @@ void DisplayTask(void* arg) {
     xSemaphoreGive(uiMtx);
 
     // Render only what changed (if timeout, bits==0 => you choose what to refresh)
-    if (bits & UI_EV_STATE) disp.display_show_state(snap.big);
+    if (bits & UI_EV_STATE) {
+        //disp.display_show_state(snap.big)
+        if (snap.AirDropOn) {
+          disp.display_show_state("AIRDROP ON");
+        } else {
+          disp.display_show_state("AIRDROP OFF");
+        }
+      }
     if (bits & UI_EV_TEXT)  disp.display_show_text(snap.text);
     if (bits & UI_EV_DEBUG) disp.display_show_debug(snap.debug);
-
     // If you want: always update a tiny status line/counters here on timeout too
   }
 }
@@ -173,31 +182,45 @@ void DisplayTask(void* arg) {
 void ButtonTask(void*) {
   pinMode(PIN_BTN1, INPUT_PULLUP);
 
-  const TickType_t period = pdMS_TO_TICKS(5);
+  const TickType_t period = pdMS_TO_TICKS(5); //5ms to tick
   const uint32_t debounce_ms = 25;
+  const uint32_t long_press = 500;
 
   bool lastRead = digitalRead(PIN_BTN1);
-  bool stable   = lastRead;
+  bool stableRead   = lastRead;
   uint32_t lastChangeMs = millis();
+  uint32_t lastStableLow = millis();
 
   for (;;) {
     vTaskDelay(period);
 
-    bool r = digitalRead(PIN_BTN1);
+    bool read = digitalRead(PIN_BTN1);
     uint32_t now = millis();
 
-    if (r != lastRead) {
-      lastRead = r;
+    //button state changed now
+    if (read != lastRead) {
+      lastRead = read;
       lastChangeMs = now;
     }
 
-    if ((now - lastChangeMs) >= debounce_ms && r != stable) {
-      stable = r;
+    //one press - no matter lenght
+    //make double press and long press??
+    if ((now - lastChangeMs) >= debounce_ms && read != stableRead) {
+      stableRead= read;
 
-      if (stable == LOW) {            // pressed (pullup)
-        ui_set_state("BTN PRESSED");
+      if (stableRead == LOW) {            // pressed (pullup)
+        lastStableLow = now;
+        ui_set_debug("BTN PRESSED");
+        //one press
+        
+
       } else {                        // released
-        ui_set_state("BTN RELEASED");
+        if(now - lastStableLow >= long_press){
+          ui_set_debug("LONG RELEASED");
+          ui_toggle_airdrop();
+        } else{
+          ui_set_debug("SHORT RELEASED");
+        }
       }
     }
   }
@@ -256,5 +279,13 @@ static void ui_set_debug(const char* s) {
   xSemaphoreGive(uiMtx);
 
   xEventGroupSetBits(uiEv, UI_EV_DEBUG);
+}
+
+static void ui_toggle_airdrop() {
+  xSemaphoreTake(uiMtx, portMAX_DELAY);
+  gUi.AirDropOn = !gUi.AirDropOn;
+  xSemaphoreGive(uiMtx);
+
+  xEventGroupSetBits(uiEv, UI_EV_STATE);
 }
 
