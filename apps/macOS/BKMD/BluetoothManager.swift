@@ -114,6 +114,7 @@ final class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelega
 
             // Send the data
             if characteristic.properties.contains(.writeWithoutResponse) {
+
                 peripheral.writeValue(payload, for: characteristic, type: .withoutResponse)
                 print("➡️ Sent key \(value) (no response) to \(characteristic.uuid)")
             } else if characteristic.properties.contains(.write) {
