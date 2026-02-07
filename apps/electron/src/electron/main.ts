@@ -1,29 +1,62 @@
 import {app, BrowserWindow, globalShortcut } from 'electron';
-import { uIOhook, UiohookKey } from 'uiohook-napi';
-import * as fs from 'fs';
-import path from 'path';
+import { uIOhook } from 'uiohook-napi';
+
+//Bluetooth Manager
+import {BluetoothManager} from './bluetooth-manager.js'
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isDev } from './util.js';
 
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let mainWindow: BrowserWindow | null = null;
 
 
-app.on('ready', () => {
-
-    let isMonitoring = false;
-    const mainWindow = new BrowserWindow({});
+async function createWindow() {
+    mainWindow = new BrowserWindow({
+        width: 800,
+        height: 600,
+        webPreferences: {
+        // Ensure this path also points to the COMPILED .js file
+        preload: path.join(__dirname, '../preload/index.js'),
+        contextIsolation: true,
+        sandbox: true, // Recommended for security
+        },
+    });
     if (isDev()) {   
         mainWindow.loadURL('http://localhost:5123');
     } else {
         mainWindow.loadFile(path.join(app.getAppPath(), '/dist-react/index.html'));
     }
 
+}
+
+
+app.on('ready', async () => {
+
+    try {
+        await BluetoothManager.initialize();
+        console.log("Bluetooth Ready");
+    } catch (err) {
+        console.error("Bluetooth initialization failed:", err);
+    }
+
+    createWindow();
+    BluetoothManager.startScanning();
+
+    let isMonitoring = false;
+
     const ret = globalShortcut.register('CommandOrControl+Shift+R', () => {
     if(isMonitoring) {
             console.log("Monitoring have already started.")
+            return
     } else {
         console.log('Monitoring combination pressed! Monitoring now...');
         setupKeyboardListeners()
     }
+    /// No dobry more tohle nefunguje.
     
     });
 
@@ -38,11 +71,14 @@ app.on('ready', () => {
 
 function setupKeyboardListeners() {
     uIOhook.on('keydown', (e) => {
-        console.log(e.keycode)
+        console.log(`${e.keycode} down`)
 
         if (e.keycode === 15 && e.altKey) {
             console.log('User performed an Alt + Tab (Window Switch)');
         }
+    })
+    uIOhook.on('keyup', (e) => {
+        console.log(`${e.keycode} up`)
     })
     uIOhook.start();
     console.log("uIOhook is now running in the background.");
