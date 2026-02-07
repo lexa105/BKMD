@@ -1,14 +1,45 @@
-import {app, BrowserWindow } from 'electron';
+import {app, BrowserWindow, globalShortcut } from 'electron';
+import { uIOhook, UiohookKey } from 'uiohook-napi';
+import * as fs from 'fs';
 import path from 'path';
 import { isDev } from './util.js';
 
 
+
+
 app.on('ready', () => {
     const mainWindow = new BrowserWindow({});
-    if (isDev()) {
+    if (isDev()) {   
         mainWindow.loadURL('http://localhost:5123');
     } else {
         mainWindow.loadFile(path.join(app.getAppPath(), '/dist-react/index.html'));
     }
+
+    const ret = globalShortcut.register('CommandOrControl+Shift+R', () => {
+
+    console.log('Stop shortcut pressed! Saving logs...');
+        setupKeyboardListeners()
+    });
+
+    if (!ret) {
+        console.log('Registration failed. Maybe another app is using this combo?');
+    }
+
     
 })
+
+
+
+function setupKeyboardListeners() {
+    uIOhook.on('keydown', (e) => {
+        console.log(e.keycode)
+
+        if (e.keycode === 15 && e.altKey) {
+            console.log('User performed an Alt + Tab (Window Switch)');
+        }
+    })
+    uIOhook.start();
+    console.log("uIOhook is now running in the background.");
+
+}
+
