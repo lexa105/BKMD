@@ -8,6 +8,8 @@ import { isDev } from './util.js';
 
 
 app.on('ready', () => {
+
+    let isMonitoring = false;
     const mainWindow = new BrowserWindow({});
     if (isDev()) {   
         mainWindow.loadURL('http://localhost:5123');
@@ -16,9 +18,13 @@ app.on('ready', () => {
     }
 
     const ret = globalShortcut.register('CommandOrControl+Shift+R', () => {
-
-    console.log('Stop shortcut pressed! Saving logs...');
+    if(isMonitoring) {
+            console.log("Monitoring have already started.")
+    } else {
+        console.log('Monitoring combination pressed! Monitoring now...');
         setupKeyboardListeners()
+    }
+    
     });
 
     if (!ret) {
