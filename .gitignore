@@ -79,9 +79,11 @@ platformio/
 KeyLogger/
 
 
+#Electron
+dist
+dist-electron
+dist-react
 
-
-#NODE
 # Logs
 logs
 *.log
