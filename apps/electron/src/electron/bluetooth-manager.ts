@@ -6,14 +6,19 @@ import { Buffer } from 'node:buffer';
 const noble = withBindings('default');
 
 
-export class BluetoothManager {
-    public static async initialize() {
+class BluetoothManager {
+    public async initialize() {
         //wait for bluetooth hardware to be ready
-        await noble.waitForPoweredOnAsync();
-        console.log('Bluetooth is powered on and ready!');
+        try {
+            await noble.waitForPoweredOnAsync();
+            console.log('Bluetooth is powered on and ready!');
+        } catch (err) {
+            console.log(err)
+        }
+        
     }
 
-    public static async startScanning() {
+    public async startScanning() {
         // Start looking for any device (empty array [] means all services)
         // The second parameter 'true' allows duplicate results (useful for RSSI tracking)
         await noble.startScanningAsync([], true);
@@ -23,14 +28,15 @@ export class BluetoothManager {
             const peripheral_uuid = peripheral.id
             const peripheral_name = peripheral.advertisement.localName || "Unknown";
             bluetoothMap.set(peripheral_uuid, peripheral_name)
-            // console.log(`Found: ${peripheral_name} [${peripheral.id}]`)
-            console.log(bluetoothMap)
+            
 
             //Pokud najdeš přímo náš dongle. Připoj. 
-            if(peripheral_uuid === "e80af61f3d5b50333abf2280c5ade676") {
+            const dongle_new = "e80af61f3d5b50333abf2280c5ade676";
+            const donge_old = "15e7cd4e46ed787ef8167cadcccee727";
+            if(peripheral_uuid === donge_old) {
                 await noble.stopScanningAsync();
                 try {
-                    await peripheral.connectAsync(); 
+                    peripheral.connect(); 
                 } catch(err) {
                     console.log(err)
                 }
@@ -40,8 +46,8 @@ export class BluetoothManager {
                 const { services, characteristics } = await peripheral.discoverAllServicesAndCharacteristicsAsync();
 
                 console.log(services, characteristics)
-                this.sendData(peripheral, "b00b", "1235", 12)
 
+                const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
             }
 
         })
@@ -50,7 +56,7 @@ export class BluetoothManager {
     }
 
 
-    public static async sendData(peripheral: any, serviceUuid: string, charUuid: string, data: any) {
+    public async sendData(peripheral: any, serviceUuid: string, charUuid: string, data: any) {
         try {
             const { characteristics } = await peripheral.discoverSomeServicesAndCharacteristicsAsync(
             [serviceUuid], 
@@ -75,6 +81,7 @@ export class BluetoothManager {
 
 
     }
-
-
 }
+
+
+export const bluetoothManager = new BluetoothManager()

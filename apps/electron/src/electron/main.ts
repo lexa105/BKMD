@@ -2,7 +2,7 @@ import {app, BrowserWindow, globalShortcut } from 'electron';
 import { uIOhook } from 'uiohook-napi';
 
 //Bluetooth Manager
-import {BluetoothManager} from './bluetooth-manager.js'
+import { bluetoothManager } from './bluetooth-manager.js'
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDev } from './util.js';
@@ -12,7 +12,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
-
 
 async function createWindow() {
     mainWindow = new BrowserWindow({
@@ -37,14 +36,14 @@ async function createWindow() {
 app.on('ready', async () => {
 
     try {
-        await BluetoothManager.initialize();
+        await bluetoothManager.initialize();
         console.log("Bluetooth Ready");
     } catch (err) {
         console.error("Bluetooth initialization failed:", err);
     }
 
     createWindow();
-    BluetoothManager.startScanning();
+    bluetoothManager.startScanning();
 
     let isMonitoring = false;
 
@@ -73,8 +72,7 @@ function setupKeyboardListeners() {
     uIOhook.on('keydown', (e) => {
         console.log(`${e.keycode} down`)
 
-        if (e.keycode === 15 && e.altKey) {
-            console.log('User performed an Alt + Tab (Window Switch)');
+        if (e.keycode === 27) {
         }
     })
     uIOhook.on('keyup', (e) => {
@@ -82,6 +80,7 @@ function setupKeyboardListeners() {
     })
     uIOhook.start();
     console.log("uIOhook is now running in the background.");
+
 
 }
 
