@@ -71,16 +71,14 @@ app.on('ready', async () => {
 function setupKeyboardListeners() {
     uIOhook.on('keydown', (e) => {
         console.log(`${e.keycode} down`)
-
-        if (e.keycode === 27) {
-        }
     })
     uIOhook.on('keyup', (e) => {
         console.log(`${e.keycode} up`)
     })
     uIOhook.start();
     console.log("uIOhook is now running in the background.");
-
-
 }
+
+
+
 
