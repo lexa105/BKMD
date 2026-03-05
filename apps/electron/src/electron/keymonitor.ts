@@ -112,7 +112,7 @@ export class KeyMonitor {
 
         //Reset our state so we dont have "stuck" ?
         this.currentModifiers = 0x00;
-        this.pressedKeys.clear;
+        this.pressedKeys.clear();
 
         //Sending bluetooth default empty buffer.
         this.sendReport()
@@ -122,8 +122,14 @@ export class KeyMonitor {
     
 
     private handleKeyEvent(uiHookKeycode: number, isDown: boolean) {
+        let changed = false;
+
         if(this.isModifier(uiHookKeycode)) {
+            const oldModifiers = this.currentModifiers;
             this.updateModifier(uiHookKeycode, isDown);
+            if (this.currentModifiers !== oldModifiers) {
+                changed = true;
+            }
         } else {
             const hidCode = MAC_HID_MAP[uiHookKeycode];
             if (!hidCode) {
@@ -132,13 +138,21 @@ export class KeyMonitor {
             } 
 
             if (isDown) {
-                this.pressedKeys.add(hidCode);
+                if (!this.pressedKeys.has(hidCode)) {
+                    this.pressedKeys.add(hidCode);
+                    changed = true;
+                }
             } else {
-                this.pressedKeys.delete(hidCode);
+                if (this.pressedKeys.has(hidCode)) {
+                    this.pressedKeys.delete(hidCode);
+                    changed = true;
+                }
             }
         }
 
-        this.sendReport();
+        if (changed) {
+            this.sendReport();
+        }
     }
 
     private sendReport() {
@@ -196,8 +210,6 @@ export class KeyMonitor {
             this.currentModifiers &= ~modifierBit
         }
     }
-
-
 
 
 }
