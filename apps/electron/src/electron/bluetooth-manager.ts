@@ -7,6 +7,16 @@ const noble = withBindings('default');
 
 
 class BluetoothManager {
+    public async isBluetoothAvailable(): Promise<boolean> {
+        try {
+            // Check current state or wait for it to be powered on
+            return noble.state === 'poweredOn';
+        } catch (err) {
+            console.error('Error checking Bluetooth availability:', err);
+            return false;
+        }
+    }
+
     public async initialize() {
         //wait for bluetooth hardware to be ready
         try {

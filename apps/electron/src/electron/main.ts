@@ -7,11 +7,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDev } from './util.js';
 
+// Key Monitor
+import { KeyMonitor } from './keymonitor.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
+const keyMonitor: KeyMonitor = new KeyMonitor();
 
 async function createWindow() {
     mainWindow = new BrowserWindow({
@@ -31,53 +35,39 @@ async function createWindow() {
     }
 
 }
-
-
 app.on('ready', async () => {
 
     try {
         await bluetoothManager.initialize();
-        console.log("Bluetooth Ready");
+        const isAvailable = await bluetoothManager.isBluetoothAvailable();
+        if (!isAvailable) {
+            console.error("Bluetooth is not available or powered off.");
+            // Optionally notify user or handle accordingly
+        } else {
+            console.log("Bluetooth Ready and Available");
+            bluetoothManager.startScanning();
+        }
     } catch (err) {
         console.error("Bluetooth initialization failed:", err);
     }
 
     createWindow();
-    bluetoothManager.startScanning();
-
-    let isMonitoring = false;
 
     const ret = globalShortcut.register('CommandOrControl+Shift+R', () => {
-    if(isMonitoring) {
-            console.log("Monitoring have already started.")
-            return
-    } else {
-        console.log('Monitoring combination pressed! Monitoring now...');
-        setupKeyboardListeners()
-    }
-    /// No dobry more tohle nefunguje.
-    
+        if (keyMonitor.isRunning) {
+            console.log('Stopping monitoring...');
+            keyMonitor.stop();
+        } else {
+            console.log('Starting monitoring...');
+            keyMonitor.start();
+        }
     });
 
     if (!ret) {
         console.log('Registration failed. Maybe another app is using this combo?');
     }
-
-    
 })
 
-
-
-function setupKeyboardListeners() {
-    uIOhook.on('keydown', (e) => {
-        console.log(`${e.keycode} down`)
-    })
-    uIOhook.on('keyup', (e) => {
-        console.log(`${e.keycode} up`)
-    })
-    uIOhook.start();
-    console.log("uIOhook is now running in the background.");
-}
 
 
 

@@ -31,7 +31,13 @@ export class KeyMonitor {
     private pressedKeys = new Set<number>();
 
     //Track if we are monitoring.
-    private isRunning = false;
+    private _isRunning = false;
+
+    public get isRunning() {
+        return this._isRunning;
+    }
+
+
 
 
     constructor() {
@@ -46,14 +52,14 @@ export class KeyMonitor {
     }
 
     public start() {
-        if (this.isRunning) return;
+        if (this._isRunning) return;
         uIOhook.start();
+        this._isRunning = true; // Update state here
     }
 
     public stop() {
         console.log("Stopping KeyMonitor");
-        this.isRunning = false;
-
+        this._isRunning = false;
         uIOhook.stop()
 
         //Reset our state so we dont have "stuck" ?
