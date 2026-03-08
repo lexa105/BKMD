@@ -1,4 +1,5 @@
 import { uIOhook, UiohookKey } from "uiohook-napi";
+import { EventEmitter } from 'node:events';
 
 const MAC_HID_MAP: Record<number, number> = {
     // Letters
@@ -71,7 +72,7 @@ const MAC_HID_MAP: Record<number, number> = {
 }
 
 
-export class KeyMonitor {
+export class KeyMonitor extends EventEmitter {
     //TODO: Dopracovat zde architekturu z Electron strany a pak to prepsat do dokumentace v Notionu. 
     
     // 2.state manegment - toto by se mělo měnit, podle stavu zmáčknutých kláves
@@ -89,6 +90,8 @@ export class KeyMonitor {
 
 
     constructor() {
+        super();
+
         // Initialize uiohook
         uIOhook.on('keydown', (e) => {
             this.handleKeyEvent(e.keycode, true);
@@ -171,7 +174,8 @@ export class KeyMonitor {
 
         console.log('Sending HID report to BLE: ', report)
         // ZDE PRIDAT BLESENDREPORT
-        //TODO: PRIDAT BLE az to bude done. 
+        //TODO: PRIDAT pomoci Observer design patternu.
+        this.emit('hid-report', report)
     }
 
 

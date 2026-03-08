@@ -1,5 +1,4 @@
 import {app, BrowserWindow, globalShortcut } from 'electron';
-import { uIOhook } from 'uiohook-napi';
 
 //Bluetooth Manager
 import { bluetoothManager } from './bluetooth-manager.js'
@@ -35,6 +34,8 @@ async function createWindow() {
     }
 
 }
+
+
 app.on('ready', async () => {
 
     try {
@@ -45,7 +46,7 @@ app.on('ready', async () => {
             // Optionally notify user or handle accordingly
         } else {
             console.log("Bluetooth Ready and Available");
-            bluetoothManager.startScanning();
+            bluetoothManager.startScanningAndConnect();
         }
     } catch (err) {
         console.error("Bluetooth initialization failed:", err);
@@ -66,8 +67,42 @@ app.on('ready', async () => {
     if (!ret) {
         console.log('Registration failed. Maybe another app is using this combo?');
     }
+
+    keyMonitor.on('hid-report', async (report: Buffer) => {
+        await bluetoothManager.sendHidReport(report);
+    })
 })
 
 
 
 
+
+
+
+
+async function cleanup() {
+    console.log('Performing app cleanup...');
+    keyMonitor.stop();
+    await bluetoothManager.disconnect()
+}
+
+
+app.on('will-quit', async (event) => {
+    event.preventDefault();
+    await cleanup();
+    app.exit();
+})
+
+
+// Handle unexpected crashes
+process.on('uncaughtException', async (error) => {
+    console.error('CRASH: Uncaught Exception:', error);
+    await cleanup();
+    process.exit(1);
+});
+
+// Handle termination signals (Ctrl+C)
+process.on('SIGINT', async () => {
+    await cleanup();
+    process.exit(0);
+});
