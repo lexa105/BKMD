@@ -1,7 +1,5 @@
 import { withBindings } from '@stoprocent/noble';
-import { Peripheral } from 'noble';
 import { Buffer } from 'node:buffer';
-import { error } from 'node:console';
 
 
 // 'default' automatically selects the right driver for Windows, Mac, or Linux
@@ -13,8 +11,8 @@ class BluetoothManager {
 
     // TEST DATA and const
     private targetCharacteristics: any = null;
-    private targetService = "b00b"; 
-    private targetCharacteristics2 = "1235";
+    // private targetService = "b00b"; 
+    // private targetCharacteristics2 = "1235";
 
 
     public async isBluetoothAvailable(): Promise<boolean> {
@@ -53,7 +51,7 @@ class BluetoothManager {
             
 
             //Pokud najdeš přímo náš dongle. Připoj. 
-            const dongle_new = "e80af61f3d5b50333abf2280c5ade676";
+            // const dongle_new = "e80af61f3d5b50333abf2280c5ade676";
             const donge_old = "15e7cd4e46ed787ef8167cadcccee727";
             if(peripheral_uuid === donge_old) {
                 await noble.stopScanningAsync();

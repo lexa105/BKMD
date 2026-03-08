@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
 function App() {
-  const [bluetoothStatus, setBluetoothStatus] = useState('Scanning...')
-  const [devices, setDevices] = useState([
+  const [bluetoothStatus] = useState('Scanning...')
+  const [devices] = useState([
     { id: '1', name: 'BKMD Dongle', status: 'Connected', type: 'Keyboard' },
     { id: '2', name: 'Logitech MX Master', status: 'Paired', type: 'Mouse' },
   ])
