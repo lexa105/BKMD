@@ -29,7 +29,6 @@ void DecoderTask(void*);
 void DisplayTask(void*);
 void ButtonTask(void*);
 
-//to learn
 
 UiState gUi; //mutexed global instance 
 SemaphoreHandle_t uiMtx;
@@ -54,8 +53,6 @@ static void ui_toggle_airdrop();
 
 void setup() {
   Serial.begin(115200);
-
-  //loger::begin(); // creates logQ + logger task
   
   //Create BLE recieved queue
   bleRxQ = xQueueCreate(16, sizeof(BlePacket));
@@ -74,7 +71,7 @@ void setup() {
     
 }
 
-//TEMPORARY SOLUTION for keyboard release
+//LEGACY SOLUTION for keyboard release
 static TimerHandle_t kbReleaseTimer = nullptr;
 static void kbReleaseTimerCb(TimerHandle_t) {
   keyboard.releaseAll();
@@ -163,7 +160,7 @@ void DecoderTask(void*) {
   }
 }
 
-//DisplayTask + MODE handle
+//DisplayTask and modes
 void DisplayTask(void* arg) {
   Display disp;
   disp.display_init();
@@ -199,7 +196,6 @@ void DisplayTask(void* arg) {
       }
     if (bits & UI_EV_TEXT)  disp.display_show_text(snap.text);
     if (bits & UI_EV_DEBUG) disp.display_show_debug(snap.debug);
-    // If you want: always update a tiny status line/counters here on timeout too
   }
 }
 
@@ -255,25 +251,29 @@ void loop() {
   //vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
-
-//TO CHANGE - WAITING FOR LEXA CODE
-//combine mouse nad keyboad packet? why not
-//keyboard send from PC both PRESS and RELASE PACKET
+//handle HID packets
 bool hid_decode(BlePacket pkt){
-  uint8_t usageID = pkt.data[0];
-  if(usageID != 0){
-    size_t pressed = keyboard.pressRaw(usageID);
-    
-    //tohle zmizi az se bude posilat i release //delay
-    scheduleKeyboardRelease(200); 
+  // Standart 8byte HID report
+  if (pkt.len == 8) {
+    keyboard.sendReport((KeyReport*)pkt.data);
+    //ui_set_debug("REPORT SEND");
+    return true;
+  }
 
-    if(pressed >= 1){return true;}
-    else {return false;}
-  } //else if(usageID n Release){ keyboard.releaseRaw(usageID);}
+  //legacy 1-byte usageID behavior
+  if (pkt.len == 1) {
+    uint8_t usageID = pkt.data[0];
+    if (usageID != 0) {
+      size_t pressed = keyboard.pressRaw(usageID);
+
+      // Still need the auto-release for legacy 1-byte packets
+      scheduleKeyboardRelease(200); 
+      return (pressed >= 1);
+    }
+  }
+
+  // TODO mouse handle
   return false;
-  
-  //mouse handle 
-
 }
 
 //handles more different packets
@@ -331,7 +331,7 @@ static void ui_toggle_airdrop() {
   xEventGroupSetBits(uiEv, UI_EV_STATE);
 }
 
-//temporary
+//LEGACY autorelease of key press
 static inline void scheduleKeyboardRelease(uint32_t delayMs) {
   // restart timer so repeated calls delay the release (common desired behavior)
   xTimerStop(kbReleaseTimer, 0);

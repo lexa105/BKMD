@@ -49,11 +49,12 @@ class BluetoothManager {
             const peripheral_name = peripheral.advertisement.localName || "Unknown";
             bluetoothMap.set(peripheral_uuid, peripheral_name)
             
-
-            //Pokud najdeš přímo náš dongle. Připoj. 
-            // const dongle_new = "e80af61f3d5b50333abf2280c5ade676";
-            const donge_old = "15e7cd4e46ed787ef8167cadcccee727";
-            if(peripheral_uuid === donge_old) {
+		console.log(bluetoothMap);
+            //Pokud najdeš přímo náš dongle. Připoj.
+		const dongle_lily = "8d26e87c48ee0d4c63a97b78a319fcf5" 
+             const dongle_new = "e80af61f3d5b50333abf2280c5ade676";
+            //const dongle_old = "15e7cd4e46ed787ef8167cadcccee727";
+            if(peripheral_uuid === dongle_lily) {
                 await noble.stopScanningAsync();
                 try {
                     await peripheral.connectAsync(); 
