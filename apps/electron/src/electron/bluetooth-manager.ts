@@ -48,6 +48,8 @@ class BluetoothManager {
             const peripheral_uuid = peripheral.id
             const peripheral_name = peripheral.advertisement.localName || "Unknown";
             bluetoothMap.set(peripheral_uuid, peripheral_name)
+
+            console.log(bluetoothMap)
             
 
             //Pokud najdeš přímo náš dongle. Připoj. 
