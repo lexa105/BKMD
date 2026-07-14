@@ -64,6 +64,7 @@ void setup() {
   gUi.AirDropOn = false;
 
   keyboard.begin();
+  mouse.begin();
   USB.begin(); // tohle nejak vypne serial1 - uart ne ? takze logger task bude na serial2
 
   //start decoder task
@@ -272,7 +273,36 @@ bool hid_decode(BlePacket pkt){
     }
   }
 
-  // TODO mouse handle
+  // 4-byte relative mouse report: [buttons, dx (int8), dy (int8), wheel (int8)]
+  // Sent by MouseMonitor on the Electron side. Buttons bitmask matches USBHIDMouse's
+  // MOUSE_LEFT/MOUSE_RIGHT/MOUSE_MIDDLE, so it can be passed straight to press()/release().
+  if (pkt.len == 4) {
+    static uint8_t last_buttons = 0;
+    uint8_t buttons = pkt.data[0];
+    int8_t dx = (int8_t)pkt.data[1];
+    int8_t dy = (int8_t)pkt.data[2];
+    int8_t wheel = (int8_t)pkt.data[3];
+
+    uint8_t pressed = buttons & ~last_buttons;
+    uint8_t released = ~buttons & last_buttons;
+    if (pressed) mouse.press(pressed);
+    if (released) mouse.release(released);
+    last_buttons = buttons;
+
+    // Throttled: mousemove packets can arrive fast enough that an unthrottled
+    // Serial.printf here would stall the decoder task while testing.
+    static uint32_t last_mouse_debug = 0;
+    if (millis() - last_mouse_debug > 100) {
+      last_mouse_debug = millis();
+      Serial.printf("MOUSE dx=%d dy=%d wheel=%d buttons=0x%02X\n", dx, dy, wheel, buttons);
+    }
+
+    if (dx != 0 || dy != 0 || wheel != 0) {
+      mouse.move(dx, dy, wheel);
+    }
+    return true;
+  }
+
   return false;
 }
 

@@ -155,6 +155,7 @@ class BluetoothManager extends EventEmitter {
 
         try {
             await this.targetCharacteristics.writeAsync(report, false);
+            console.log('HID report sent:', report)
         } catch (e) {
             console.error("Failed to send HID report: ", e)
         }

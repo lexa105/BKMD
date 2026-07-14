@@ -9,12 +9,16 @@ import { isDev } from './util.js';
 // Key Monitor
 import { KeyMonitor } from './keymonitor.js';
 
+// Mouse Monitor
+import { MouseMonitor } from './mousemonitor.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 const keyMonitor: KeyMonitor = new KeyMonitor();
+const mouseMonitor: MouseMonitor = new MouseMonitor();
 
 async function createWindow() {
     mainWindow = new BrowserWindow({
@@ -87,9 +91,11 @@ app.on('ready', async () => {
         if (keyMonitor.isRunning) {
             console.log('Stopping monitoring...');
             keyMonitor.stop();
+            mouseMonitor.stop();
         } else {
             console.log('Starting monitoring...');
             keyMonitor.start();
+            mouseMonitor.start();
         }
     });
 
@@ -98,6 +104,10 @@ app.on('ready', async () => {
     }
 
     keyMonitor.on('hid-report', async (report: Buffer) => {
+        await bluetoothManager.sendHidReport(report);
+    })
+
+    mouseMonitor.on('hid-report', async (report: Buffer) => {
         await bluetoothManager.sendHidReport(report);
     })
 })
@@ -112,6 +122,7 @@ app.on('ready', async () => {
 async function cleanup() {
     console.log('Performing app cleanup...');
     keyMonitor.stop();
+    mouseMonitor.stop();
     await bluetoothManager.disconnect()
 }
 
