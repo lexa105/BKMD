@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2020",
+    // Electron's sandboxed preload loader executes scripts as plain
+    // CommonJS - it cannot parse ESM import/export syntax like the rest
+    // of this ("type": "module") package.
+    "module": "CommonJS",
+    "rootDir": ".",
+    "outDir": "../../../dist-electron/preload",
+    "skipLibCheck": true
+  },
+  "include": ["index.ts"]
+}

@@ -1,19 +1,27 @@
-import { withBindings } from '@stoprocent/noble';
+import { withBindings, Peripheral } from '@stoprocent/noble';
 import { Buffer } from 'node:buffer';
-
+import { EventEmitter } from 'node:events';
 
 // 'default' automatically selects the right driver for Windows, Mac, or Linux
 const noble = withBindings('default');
 
+const HID_CHARACTERISTIC_UUID = '1235';
 
-class BluetoothManager {
-    private connectedPeripheral: any = null;
+export interface BluetoothDevice {
+    id: string;
+    name: string;
+    rssi: number;
+    connectable: boolean;
+}
 
-    // TEST DATA and const
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
+
+class BluetoothManager extends EventEmitter {
+    private discoveredPeripherals = new Map<string, Peripheral>();
+    private connectedPeripheral: Peripheral | null = null;
     private targetCharacteristics: any = null;
-    // private targetService = "b00b"; 
-    // private targetCharacteristics2 = "1235";
-
+    private connectionState: ConnectionState = 'disconnected';
+    private scanning = false;
 
     public async isBluetoothAvailable(): Promise<boolean> {
         try {
@@ -33,73 +41,100 @@ class BluetoothManager {
         } catch (err) {
             console.log(err)
         }
-        
+
+        noble.on('discover', (peripheral) => {
+            this.discoveredPeripherals.set(peripheral.id, peripheral);
+            this.emit('deviceDiscovered', this.toDeviceInfo(peripheral));
+        });
     }
 
-    public async startScanningAndConnect() {
-        // TEST DEMO: Now it will connect immediately to the old dongle uuid.
+    public getDiscoveredDevices(): BluetoothDevice[] {
+        return Array.from(this.discoveredPeripherals.values()).map((p) => this.toDeviceInfo(p));
+    }
 
-        // Start looking for any device (empty array [] means all services)
-        // The second parameter 'true' allows duplicate results (useful for RSSI tracking)
+    public getConnectionState(): ConnectionState {
+        return this.connectionState;
+    }
+
+    public isScanning(): boolean {
+        return this.scanning;
+    }
+
+    public async startScanning() {
+        if (this.scanning) return;
+        this.discoveredPeripherals.clear();
+        // Empty array [] means "any service", 'true' allows duplicate discover
+        // events per peripheral so RSSI keeps updating while the list is open.
         await noble.startScanningAsync([], true);
-        let bluetoothMap = new Map<string, string>
+        this.scanning = true;
+        this.emit('scanStateChanged', true);
+    }
 
-        noble.on('discover', async (peripheral) => {
-            const peripheral_uuid = peripheral.id
-            const peripheral_name = peripheral.advertisement.localName || "Unknown";
-            bluetoothMap.set(peripheral_uuid, peripheral_name)
-            
-		console.log(bluetoothMap);
-            //Pokud najdeš přímo náš dongle. Připoj.
-		const dongle_lily = "8d26e87c48ee0d4c63a97b78a319fcf5" 
-             const dongle_new = "e80af61f3d5b50333abf2280c5ade676";
-            //const dongle_old = "15e7cd4e46ed787ef8167cadcccee727";
-            if(peripheral_uuid === dongle_lily) {
-                await noble.stopScanningAsync();
-                try {
-                    await peripheral.connectAsync(); 
-                    this.connectedPeripheral = peripheral; //Saving peripheral
+    public async stopScanning() {
+        if (!this.scanning) return;
+        await noble.stopScanningAsync();
+        this.scanning = false;
+        this.emit('scanStateChanged', false);
+    }
 
-                    console.log('Dongle pripojen');
-                    const { services, characteristics } = await peripheral.discoverAllServicesAndCharacteristicsAsync();
+    public async connect(peripheralId: string) {
+        const peripheral = this.discoveredPeripherals.get(peripheralId);
+        if (!peripheral) {
+            throw new Error(`Unknown device id: ${peripheralId}`);
+        }
 
-                    // 3. Print them out (Tip: mapping them makes it easier to read in the console)
+        if (this.connectedPeripheral) {
+            await this.disconnect();
+        }
 
-                    console.log("Found Services:", services.map(s => s.uuid));
-                    console.log("Found Characteristics:", characteristics.map(c => c.uuid));
+        this.setConnectionState('connecting');
 
-                    // Set target characteristics for HID reports
-                    const hidChar = characteristics.find(c => c.uuid === '1235');
-                    if (hidChar) {
-                        this.targetCharacteristics = hidChar;
-                        console.log('Target characteristic (1235) found and set!');
-                    } else {
-                        console.warn('Target characteristic (1235) NOT found on this device.');
-                    }
-                } catch(err) {
-                    console.log(err)
-                }
-                
-
-                
+        try {
+            if (this.scanning) {
+                await this.stopScanning();
             }
 
-        })
+            await peripheral.connectAsync();
+            this.connectedPeripheral = peripheral;
 
+            peripheral.once('disconnect', () => {
+                this.connectedPeripheral = null;
+                this.targetCharacteristics = null;
+                this.setConnectionState('disconnected');
+            });
 
+            const { services, characteristics } = await peripheral.discoverAllServicesAndCharacteristicsAsync();
+
+            console.log("Found Services:", services.map(s => s.uuid));
+            console.log("Found Characteristics:", characteristics.map(c => c.uuid));
+
+            const hidChar = characteristics.find(c => c.uuid === HID_CHARACTERISTIC_UUID);
+            if (hidChar) {
+                this.targetCharacteristics = hidChar;
+                console.log('Target characteristic (1235) found and set!');
+            } else {
+                console.warn('Target characteristic (1235) NOT found on this device.');
+            }
+
+            this.setConnectionState('connected');
+        } catch (err) {
+            this.connectedPeripheral = null;
+            this.setConnectionState('disconnected');
+            throw err;
+        }
     }
 
-    public async sendData(peripheral: any, serviceUuid: string, charUuid: string, data: any) {
+    public async sendData(peripheral: Peripheral, serviceUuid: string, charUuid: string, data: any) {
         try {
             const { characteristics } = await peripheral.discoverSomeServicesAndCharacteristicsAsync(
-            [serviceUuid], 
-            [charUuid]
+                [serviceUuid],
+                [charUuid]
             );
 
             const targetChar = characteristics[0];
 
             if (!targetChar) {
-            throw new Error('Characteristic not found');
+                throw new Error('Characteristic not found');
             }
 
             const payload = Buffer.from(data, 'utf-8')
@@ -113,32 +148,46 @@ class BluetoothManager {
     }
 
     public async sendHidReport(report: Buffer) {
-        if(!this.targetCharacteristics) {
+        if (!this.targetCharacteristics) {
             console.warn('Cannot send HID report: No target characteristic connected.')
             return;
         }
 
         try {
             await this.targetCharacteristics.writeAsync(report, false);
-            console.log('HID report sent')
         } catch (e) {
             console.error("Failed to send HID report: ", e)
         }
     }
 
-    
-
     public async disconnect() {
         if (this.connectedPeripheral) {
             console.log('Disconnecting from Bluetooth peripheral...')
-            try { 
+            try {
                 await this.connectedPeripheral.disconnectAsync();
-                this.connectedPeripheral = null;
                 console.log('Bluetooth disconnected cleanly.');
             } catch (err) {
-                console.error('Error during Bluetooth disconnect')
+                console.error('Error during Bluetooth disconnect', err)
+            } finally {
+                this.connectedPeripheral = null;
+                this.targetCharacteristics = null;
+                this.setConnectionState('disconnected');
             }
         }
+    }
+
+    private setConnectionState(state: ConnectionState) {
+        this.connectionState = state;
+        this.emit('connectionStateChanged', state, this.connectedPeripheral ? this.toDeviceInfo(this.connectedPeripheral) : null);
+    }
+
+    private toDeviceInfo(peripheral: Peripheral): BluetoothDevice {
+        return {
+            id: peripheral.id,
+            name: peripheral.advertisement?.localName || 'Unknown Device',
+            rssi: peripheral.rssi,
+            connectable: peripheral.connectable,
+        };
     }
 }
 
