@@ -15,7 +15,8 @@ just type on the laptop and forwards those keystrokes wirelessly to the desktop.
 1. The BKMD dongle plugs via USB-A into the PC you want to *control* (the "target"). To that PC,
    it enumerates as a normal USB keyboard/mouse (USB HID device).
 2. The desktop app runs on the machine you want to *control from* (e.g. your laptop) and hooks
-   your keyboard globally.
+   your keyboard globally, using the [`uiohook-napi`](https://github.com/SnosMe/uiohook-napi)
+   library (native bindings around `libuiohook`) for OS-level, cross-platform global key capture.
 3. Captured keystrokes are converted into standard USB HID reports and sent to the dongle over
    BLE.
 4. The dongle replays those reports over USB HID into the target PC — so from the target PC's
@@ -34,6 +35,12 @@ just type on the laptop and forwards those keystrokes wirelessly to the desktop.
 - `firmware/AirdropOnly_firmware/` — a work-in-progress firmware variant isolating a newer
   feature under development.
 - `docs/` — reserved for future protocol/architecture documentation.
+
+Key libraries used in `apps/electron`:
+- [`uiohook-napi`](https://github.com/SnosMe/uiohook-napi) — global keyboard (and mouse, once
+  wired up) hook used to capture input on the controlling machine.
+- [`@stoprocent/noble`](https://github.com/stoprocent/noble) — BLE central-role library used to
+  scan for, connect to, and write HID reports to the dongle.
 
 See `CLAUDE.md` at the repo root for a more detailed technical breakdown (BLE protocol/UUIDs,
 build commands, current implementation status and known gaps) intended for contributors and AI
