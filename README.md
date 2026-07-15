@@ -34,7 +34,9 @@ just type on the laptop and forwards those keystrokes wirelessly to the desktop.
   NimBLE) that runs on the dongle itself.
 - `firmware/AirdropOnly_firmware/` — a work-in-progress firmware variant isolating a newer
   feature under development.
-- `docs/` — reserved for future protocol/architecture documentation.
+- `docs/` — reserved for future protocol/architecture documentation. See
+  [`docs/getting-started.md`](docs/getting-started.md) for how to install and run the desktop
+  app.
 
 Key libraries used in `apps/electron`:
 - [`uiohook-napi`](https://github.com/SnosMe/uiohook-napi) — global keyboard (and mouse, once
