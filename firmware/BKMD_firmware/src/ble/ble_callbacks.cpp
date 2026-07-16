@@ -4,6 +4,13 @@
 
 //#include "logging"
 
+namespace {
+constexpr uint16_t CONN_INTERVAL_MIN = 6;  // 7.5 ms
+constexpr uint16_t CONN_INTERVAL_MAX = 12; // 15 ms
+constexpr uint16_t CONN_LATENCY = 0;
+constexpr uint16_t CONN_TIMEOUT = 200;     // 2 seconds
+}
+
 /** CALLBACKS overwriten methods - */
 
 //SERVER
@@ -14,7 +21,13 @@ void ServerCallbacks::onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo)
 
   _owner.setConnected(connInfo.getConnHandle());
 
-  pServer->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 180);
+  pServer->updateConnParams(
+    connInfo.getConnHandle(),
+    CONN_INTERVAL_MIN,
+    CONN_INTERVAL_MAX,
+    CONN_LATENCY,
+    CONN_TIMEOUT
+  );
 }
 
 void ServerCallbacks::onDisconnect(NimBLEServer*, NimBLEConnInfo&, int)  {

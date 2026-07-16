@@ -134,12 +134,7 @@ void DecoderTask(void*) {
     if (xQueueReceive(bleRxQ, &pkt, portMAX_DELAY) == pdTRUE) {
       // decode pkt - t_ms,len,data
       if (pkt.callback == 0) {//data characteristic 
-        bool ok = hid_decode(pkt);
-        
-        // 2. Update UI state
-        if (ok) {
-          ui_set_debug("HID OK");
-        } else {
+        if (!hid_decode(pkt)) {
           ui_set_debug("HID BAD");
         }
       } else { //else if(callback == 1)
@@ -368,4 +363,3 @@ static inline void scheduleKeyboardRelease(uint32_t delayMs) {
   xTimerChangePeriod(kbReleaseTimer, pdMS_TO_TICKS(delayMs), 0);
   xTimerStart(kbReleaseTimer, 0);
 }
-
