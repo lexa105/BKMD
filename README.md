@@ -32,15 +32,13 @@ just type on the laptop and forwards those keystrokes wirelessly to the desktop.
   Frozen/kept for reference; not under active development.
 - `firmware/BKMD_firmware/` — the active ESP32-S3 firmware (PlatformIO, Arduino framework,
   NimBLE) that runs on the dongle itself.
-- `firmware/AirdropOnly_firmware/` — a work-in-progress firmware variant isolating a newer
-  feature under development.
 - `docs/` — reserved for future protocol/architecture documentation. See
   [`docs/getting-started.md`](docs/getting-started.md) for how to install and run the desktop
   app.
 
 Key libraries used in `apps/electron`:
-- [`uiohook-napi`](https://github.com/SnosMe/uiohook-napi) — global keyboard (and mouse, once
-  wired up) hook used to capture input on the controlling machine.
+- [`uiohook-napi`](https://github.com/SnosMe/uiohook-napi) — global keyboard and mouse hook used
+  to capture input on the controlling machine.
 - [`@stoprocent/noble`](https://github.com/stoprocent/noble) — BLE central-role library used to
   scan for, connect to, and write HID reports to the dongle.
 
@@ -50,14 +48,9 @@ coding assistants working in this codebase.
 
 ### Project status (2026-07)
 
-Currently working: toggling keyboard capture via global shortcut, and forwarding captured
-keystrokes as BLE HID reports from the app to the dongle, which the firmware correctly replays
-as USB HID keyboard input on the target PC.
-
-Not yet implemented: mouse forwarding (app and firmware both have stubs but no working path
-end-to-end), an in-app device picker (the app currently auto-connects to a hardcoded dongle
-during testing), and a real UI (the current React UI is a visual mockup, not yet wired to the
-backend).
+Currently working: selecting and connecting to a BLE dongle, toggling global input capture, and
+forwarding keyboard and mouse reports to the firmware for replay as USB HID input on the target
+PC.
 
 ## SOFTWARE Desktop App
 As the first development phase in 2025 occurred in Swift to create a demo prototype and verify project's core functionality and feasibility (DONE: With some errors, but the main function worked in Q4 2025)
@@ -82,11 +75,10 @@ and targets two board configurations:
 * **`esp32-s3-devkitc-1`** — a generic ESP32-S3 dev board used for development/testing without a
   display.
 
-The firmware advertises itself over BLE (NimBLE) as a GATT server with one service exposing a
-data characteristic (keyboard/mouse HID reports) and a util characteristic (control messages like
-clipboard paste and an "AirDrop" advertising toggle triggered by a hardware button). On the USB
-side it enumerates as a native HID keyboard/mouse via the ESP32-S3's USB peripheral, so the
-target PC needs no special drivers.
+The firmware advertises itself over BLE (NimBLE) as a GATT server with one write-only data
+characteristic for keyboard and mouse HID reports. A hardware button controls the experimental
+"AirDrop" advertising mode locally. On the USB side it enumerates as a native HID keyboard/mouse
+via the ESP32-S3's USB peripheral, so the target PC needs no special drivers.
 
 ## WORK IN PROGRESS
 

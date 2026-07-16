@@ -1,10 +1,4 @@
-/*
-* BKMD Project Display Library
-*
-* Custom function for TFT_eSPI telemetry. 
-* TODO:
-* rewrite functions to work with Sprite = offscreen buffer, for offscreen compositions, flicker free transition
-*/
+/* BKMD TFT status display. */
 
 #include "display.h"
 
@@ -43,19 +37,6 @@ void Display::display_show_state(const char* state) {
     tft.drawString(line, 0, 8); // 8 px odshora pro lepší vzhled
 }
 
-//  běžný text (pod stavem)
-void Display::display_show_text(const char* text) {
-    tft.fillRect(0, 24, tft.width(), 8, TERM_BG);
-    tft.setTextFont(1); // GLCD 8x8
-    tft.setTextColor(TERM_GREEN, TERM_BG);
-    tft.setTextDatum(TL_DATUM); // Zarovnání vlevo nahoře
-    String line = ">";
-    line += text;
-    tft.setTextPadding(tft.width());   // <--- ensures old text is blanked
-    tft.drawString(line, 0, 24); // 24 px odshora (pod stavem)
-}
-
-//tft.setTextPadding(tft.width());   // <--- ensures old text is blanked
 // Menší běžný text (pod stavem)
 void Display::display_show_debug(const char* text) {
     tft.fillRect(0, 40, tft.width(), 8, TERM_BG);
@@ -88,9 +69,8 @@ void Display::display_show_history(const char* text){
 #else
 // Dummy functions if no display is connected
 void Display::display_init() {}
-void Display::display_show_state(const char* state) {}
-void Display::display_show_text(const char* text) {}
-void Display::display_show_debug(const char* text) {} 
+void Display::display_show_state(const char*) {}
+void Display::display_show_debug(const char*) {}
 
 
-#endif 
+#endif

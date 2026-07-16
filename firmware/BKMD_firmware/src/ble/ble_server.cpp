@@ -1,27 +1,12 @@
-/*
-- NimBLE wrapper to Start server/Stop(?) server and work with:
- --queues
- -- debug messages
-- would like to make the code very reusable - class/
-*/
-
 #include <Arduino.h>
 #include "NimBLEDevice.h"
 #include "ble_server.h"
 
-
-//#include "utils/Logger.h"   // optional
-
-//ble server Constructor
 BleServer::BleServer(QueueHandle_t rxQueue)
-: _rxQueue(rxQueue)
-, _serverCallbacks(*this)
+: _serverCallbacks(*this)
 , _dataCallbacks(rxQueue)   
-, _utilCallbacks(rxQueue)
 {}
 
-//Methodes defined outside the class- not a fan
-// -------------------- BLE setup --------------------
 void BleServer::start() {
 
     NimBLEDevice::init(SERVER_NAME);
@@ -31,31 +16,16 @@ void BleServer::start() {
 
     pServer->setCallbacks(&_serverCallbacks);
 
-    //SERVICE SETUP
     pService = pServer->createService(SVC_UUID);
 
-    //UTIL CHAR
-    pUtilCharacteristic = pService->createCharacteristic(
-    UTIL_UUID,
-    NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
-    );
-    pUtilCharacteristic->setValue("01");
-    pUtilCharacteristic->setCallbacks(&_utilCallbacks); 
-
-    //DATA CHAR
     pDataCharacteristic = pService->createCharacteristic(
         DATA_UUID,
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
+        NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
     ); 
-    pDataCharacteristic->setValue("NULL");
-    pDataCharacteristic->setCallbacks(&_dataCallbacks); //callbacks. muzu mit vic ruznych? tho
+    pDataCharacteristic->setCallbacks(&_dataCallbacks);
 
-  
-  
-    /** Start the services when finished creating all Characteristics and Descriptors */
     pService->start();
 
-    /** Store an advertising instance and add the services to the advertised data */
     _adv = NimBLEDevice::getAdvertising();
     _adv->setName("BLE-Dongle");
     _adv->addServiceUUID(pService->getUUID());
@@ -64,14 +34,10 @@ void BleServer::start() {
 
     _started = true;
 
-
-  //option to turn of advert after connection ? 
-  //LOG("advertising started")
   Serial.printf("Advertising Started\n");
    
 }
 
- // Keep stack initialized; do not deinit/free. This is "soft" stop.
 void BleServer::soft_stop(bool disconnectClient) {
   _advEnabled = false;
   if (!_started) return;

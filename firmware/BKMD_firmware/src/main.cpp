@@ -10,8 +10,6 @@
 
 #define PIN_BTN1 0
 
-//nclude "utils/Logger.h"
-
 #include "USB.h"
 #include "USBHIDMouse.h"
 #include "USBHIDKeyboard.h"
@@ -23,7 +21,6 @@ static TaskHandle_t decoderTaskHandle = nullptr;
 static TaskHandle_t displayTaskHandle = nullptr;
 static TaskHandle_t buttonTaskHandle = nullptr;
 
-//to clean?
 void startTasks();
 void DecoderTask(void*);
 void DisplayTask(void*);
@@ -35,19 +32,15 @@ SemaphoreHandle_t uiMtx;
 EventGroupHandle_t uiEv;
 enum : EventBits_t {
   UI_EV_STATE  = (1 << 0),
-  UI_EV_TEXT   = (1 << 1),
-  UI_EV_DEBUG  = (1 << 2),
-  UI_EV_ALL    = UI_EV_STATE | UI_EV_TEXT | UI_EV_DEBUG
+  UI_EV_DEBUG  = (1 << 1),
+  UI_EV_ALL    = UI_EV_STATE | UI_EV_DEBUG
 };
 
 USBHIDKeyboard keyboard;
 USBHIDMouse mouse;
 
-//to clean - move to dedicated class/header
-bool hid_decode(BlePacket pkt);
-bool util_decode(BlePacket pkt);
+bool hid_decode(const BlePacket& pkt);
 static void ui_set_debug(const char* s);
-static void ui_set_state(const char* s);
 static void ui_toggle_airdrop();
 
 
@@ -65,19 +58,12 @@ void setup() {
 
   keyboard.begin();
   mouse.begin();
-  USB.begin(); // tohle nejak vypne serial1 - uart ne ? takze logger task bude na serial2
+  USB.begin();
 
   //start decoder task
   startTasks();
     
 }
-
-//LEGACY SOLUTION for keyboard release
-static TimerHandle_t kbReleaseTimer = nullptr;
-static void kbReleaseTimerCb(TimerHandle_t) {
-  keyboard.releaseAll();
-}
-static inline void scheduleKeyboardRelease(uint32_t delayMs);
 
 void startTasks() {
   uiMtx = xSemaphoreCreateMutex();
@@ -112,38 +98,16 @@ void startTasks() {
   &buttonTaskHandle, // handle (optional)
   1                  // core 1
   );
-
-
-  //Temporary
-  kbReleaseTimer = xTimerCreate(
-  "kbRel",
-  pdMS_TO_TICKS(50),
-  pdFALSE,        // one-shot
-  nullptr,
-  kbReleaseTimerCb
-);
-
 }
 
 
-//Decodes BLE packet from queue. Appplies HID. Changes Display and Util data.
 void DecoderTask(void*) {
   BlePacket pkt;
   static uint32_t last = 0;
   for (;;) {
     if (xQueueReceive(bleRxQ, &pkt, portMAX_DELAY) == pdTRUE) {
-      // decode pkt - t_ms,len,data
-      if (pkt.callback == 0) {//data characteristic 
-        if (!hid_decode(pkt)) {
-          ui_set_debug("HID BAD");
-        }
-      } else { //else if(callback == 1)
-        bool ok = util_decode(pkt);
-         if (ok) {
-          ui_set_debug("UTIL OK");
-        } else {
-          ui_set_debug("UTIL BAD"); 
-        }
+      if (!hid_decode(pkt)) {
+        ui_set_debug("HID BAD");
       }
     }
 
@@ -181,7 +145,6 @@ void DisplayTask(void* arg) {
 
     // Render only what changed (if timeout, bits==0 => you choose what to refresh)
     if (bits & UI_EV_STATE) {
-        //disp.display_show_state(snap.big)
         if (snap.AirDropOn) {
           disp.display_show_state("AIRDROP ON");
           ble->soft_stop(true);
@@ -190,7 +153,6 @@ void DisplayTask(void* arg) {
           ble->resume();
         }
       }
-    if (bits & UI_EV_TEXT)  disp.display_show_text(snap.text);
     if (bits & UI_EV_DEBUG) disp.display_show_debug(snap.debug);
   }
 }
@@ -213,59 +175,31 @@ void ButtonTask(void*) {
     bool read = digitalRead(PIN_BTN1);
     uint32_t now = millis();
 
-    //button state changed now
     if (read != lastRead) {
       lastRead = read;
       lastChangeMs = now;
     }
 
-    //one press - no matter lenght
-    //make double press and long press??
     if ((now - lastChangeMs) >= debounce_ms && read != stableRead) {
-      stableRead= read;
+      stableRead = read;
 
-      if (stableRead == LOW) {            // pressed (pullup)
+      if (stableRead == LOW) {
         lastStableLow = now;
-        ui_set_debug("BTN PRESSED");
-        //one press
-        
-
-      } else {                        // released
-        if(now - lastStableLow >= long_press){
-          ui_set_debug("LONG RELEASED");
-          ui_toggle_airdrop();
-        } else{
-          ui_set_debug("SHORT RELEASED");
-          keyboard.print("Tesst Clipboard vice klaves zmacknutych jak to bude lexa implemenvovat to jsem zvedavej1234{}[]!@#$"); //funguje cele
-        }
+      } else if (now - lastStableLow >= long_press) {
+        ui_toggle_airdrop();
       }
     }
   }
 }
 
 void loop() {
-  //vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
-//handle HID packets
-bool hid_decode(BlePacket pkt){
-  // Standart 8byte HID report
+bool hid_decode(const BlePacket& pkt){
+  // Standard 8-byte keyboard report.
   if (pkt.len == 8) {
     keyboard.sendReport((KeyReport*)pkt.data);
-    //ui_set_debug("REPORT SEND");
     return true;
-  }
-
-  //legacy 1-byte usageID behavior
-  if (pkt.len == 1) {
-    uint8_t usageID = pkt.data[0];
-    if (usageID != 0) {
-      size_t pressed = keyboard.pressRaw(usageID);
-
-      // Still need the auto-release for legacy 1-byte packets
-      scheduleKeyboardRelease(200); 
-      return (pressed >= 1);
-    }
   }
 
   // 4-byte relative mouse report: [buttons, dx (int8), dy (int8), wheel (int8)]
@@ -274,23 +208,15 @@ bool hid_decode(BlePacket pkt){
   if (pkt.len == 4) {
     static uint8_t last_buttons = 0;
     uint8_t buttons = pkt.data[0];
-    int8_t dx = (int8_t)pkt.data[1];
-    int8_t dy = (int8_t)pkt.data[2];
-    int8_t wheel = (int8_t)pkt.data[3];
+    int8_t dx = static_cast<int8_t>(pkt.data[1]);
+    int8_t dy = static_cast<int8_t>(pkt.data[2]);
+    int8_t wheel = static_cast<int8_t>(pkt.data[3]);
 
     uint8_t pressed = buttons & ~last_buttons;
     uint8_t released = ~buttons & last_buttons;
     if (pressed) mouse.press(pressed);
     if (released) mouse.release(released);
     last_buttons = buttons;
-
-    // Throttled: mousemove packets can arrive fast enough that an unthrottled
-    // Serial.printf here would stall the decoder task while testing.
-    static uint32_t last_mouse_debug = 0;
-    if (millis() - last_mouse_debug > 100) {
-      last_mouse_debug = millis();
-      Serial.printf("MOUSE dx=%d dy=%d wheel=%d buttons=0x%02X\n", dx, dy, wheel, buttons);
-    }
 
     if (dx != 0 || dy != 0 || wheel != 0) {
       mouse.move(dx, dy, wheel);
@@ -299,44 +225,6 @@ bool hid_decode(BlePacket pkt){
   }
 
   return false;
-}
-
-//handles more different packets
-//- clipboard
-//- setup
-bool util_decode(BlePacket pkt){
-  const char packetType = pkt.data[0];
-  if(packetType == '1') {
-    ui_toggle_airdrop();
-    return true;
-  } else if(packetType == 'C') { //CLIPBOARD PASTE
-    if (pkt.len <= 1) return false;
-
-    char text[BLE_MAX_PAYLOAD]; 
-    size_t n = pkt.len - 1;
-
-    memcpy(text, &pkt.data[1], n);
-    text[n] = '\0';               // should be on end of string ?
-
-    keyboard.print(text);
-    return true;
-  } else{
-    return false;
-  }
-
-}
-
-
-//to learn
-//
-static void ui_set_state(const char* s) {
-  xSemaphoreTake(uiMtx, portMAX_DELAY);
-  strncpy(gUi.big, s, sizeof(gUi.big)-1);
-  gUi.big[sizeof(gUi.big)-1] = '\0';
-  xSemaphoreGive(uiMtx);
-
-  //wake up display task
-  xEventGroupSetBits(uiEv, UI_EV_STATE);
 }
 
 static void ui_set_debug(const char* s) {
@@ -354,12 +242,4 @@ static void ui_toggle_airdrop() {
   xSemaphoreGive(uiMtx);
 
   xEventGroupSetBits(uiEv, UI_EV_STATE);
-}
-
-//LEGACY autorelease of key press
-static inline void scheduleKeyboardRelease(uint32_t delayMs) {
-  // restart timer so repeated calls delay the release (common desired behavior)
-  xTimerStop(kbReleaseTimer, 0);
-  xTimerChangePeriod(kbReleaseTimer, pdMS_TO_TICKS(delayMs), 0);
-  xTimerStart(kbReleaseTimer, 0);
 }

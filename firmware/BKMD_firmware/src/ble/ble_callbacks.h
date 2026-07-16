@@ -4,7 +4,7 @@
 #include "freertos/queue.h"
 
 
-class BleServer;  // forward declaration - to change _connected
+class BleServer;
 
 class ServerCallbacks : public NimBLEServerCallbacks {
 public:
@@ -25,22 +25,6 @@ public:
     explicit CharacteristicDataCallbacks(QueueHandle_t q) : _q(q) {}
     
     void onWrite(NimBLECharacteristic* chr, NimBLEConnInfo& connInfo) override;
-    void onRead(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo) override;
-    void onStatus(NimBLECharacteristic* pCharacteristic, int code) override;
-    void onSubscribe(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo, uint16_t subValue) override;
-
-private:
-    QueueHandle_t _q;
-};
-
-class CharacteristicUtilCallbacks : public NimBLECharacteristicCallbacks {
-public:
-    explicit CharacteristicUtilCallbacks(QueueHandle_t q) : _q(q) {}
-
-    void onWrite(NimBLECharacteristic* chr, NimBLEConnInfo& connInfo) override;
-    void onRead(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo) override;
-    void onStatus(NimBLECharacteristic* pCharacteristic, int code) override;
-    void onSubscribe(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo, uint16_t subValue) override;
 
 private:
     QueueHandle_t _q;

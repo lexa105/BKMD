@@ -47,7 +47,6 @@ apps/
   macOS/        Legacy native Swift/SwiftUI prototype — superseded, kept for reference only
 firmware/
   BKMD_firmware/        Active ESP32-S3 firmware (PlatformIO + Arduino framework + NimBLE)
-  AirdropOnly_firmware/ WIP experimental firmware exploring the "AirDrop toggle" feature in isolation
   platformio/            Local scratch PlatformIO scaffold, gitignored, not part of the build
 docs/           Currently empty — intended home for future protocol/architecture docs
 python-scripts/, protocol/   Out of scope / not actively maintained — ignore unless asked
@@ -60,19 +59,13 @@ source comments are frequently written in Czech.
 ## Current implementation status (as of 2026-07)
 
 Working:
-- Electron app: global shortcut start/stop of keyboard capture, and forwarding of keyboard-only
-  HID reports over BLE to a dongle.
-- Firmware: receiving 8-byte HID keyboard reports over BLE and replaying them via `USBHIDKeyboard`;
-  legacy 1-byte usage-ID path; clipboard-paste-as-typed-text util command; "AirDrop" advertising
-  toggle via long button press; optional TFT status display on the LilyGO board variant.
+- Electron app: device discovery and connection UI, global shortcut start/stop of keyboard and
+  mouse capture, and forwarding HID reports over BLE to a dongle.
+- Firmware: receiving 8-byte keyboard and 4-byte mouse reports over BLE and replaying them as USB
+  HID; "AirDrop" advertising toggle via long button press; optional TFT status display on the
+  LilyGO board variant.
 
 Not yet working / explicitly TODO in code:
-- Mouse support end-to-end (no mouse hook in `keymonitor.ts`; firmware's `hid_decode` has a
-  `// TODO mouse handle` stub; `USBHIDMouse` is instantiated in `main.cpp` but unused).
-- Device discovery/selection UI — `bluetooth-manager.ts` currently scans and auto-connects to a
-  hardcoded dongle UUID ("TEST DEMO" in comments), rather than letting the user pick a device.
-- The React UI (`apps/electron/src/ui/App.tsx`) is a static mockup with hardcoded fake device
-  data, not wired to the backend (`BluetoothManager`/`KeyMonitor`) yet.
 - Per-user keybind configuration for switching between devices — only the single hardcoded
   global shortcut exists today.
 - `apps/macOS` is frozen; do not add new features there — port relevant logic to
@@ -83,15 +76,12 @@ Not yet working / explicitly TODO in code:
 Defined in `firmware/BKMD_firmware/src/ble/ble_server.h`.
 
 - Service UUID: `B00B`
-- Characteristic `1234` ("UTIL", read/write): control-plane messages
-  - first byte `'1'` → toggle AirDrop mode (soft-stops/resumes BLE advertising)
-  - first byte `'C'` → remaining bytes are UTF-8 text to type out via USB HID (clipboard paste)
-- Characteristic `1235` ("DATA", read/write): HID reports
+- Characteristic `1235` ("DATA", write/write-without-response): HID reports
   - 8-byte payload → standard USB HID boot-keyboard report (`report[0]` = modifier bitmask,
     `report[2..7]` = up to 6 pressed HID usage codes)
-  - 1-byte payload → legacy single usage-ID press with an auto-release timer (~200ms)
+  - 4-byte payload → relative mouse report (`buttons`, `dx`, `dy`, `wheel`)
 
-The firmware decodes both channels through a FreeRTOS queue (`BlePacket`) consumed by
+The firmware decodes the data channel through a FreeRTOS queue (`BlePacket`) consumed by
 `DecoderTask` in `main.cpp`.
 
 ## Building & running
