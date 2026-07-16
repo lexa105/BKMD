@@ -108,7 +108,7 @@ app.on('ready', async () => {
     })
 
     mouseMonitor.on('hid-report', async (report: Buffer) => {
-        await bluetoothManager.sendHidReport(report);
+        await bluetoothManager.sendHidReport(report, true);
     })
 })
 

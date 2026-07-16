@@ -45,7 +45,7 @@ void BleServer::start() {
     //DATA CHAR
     pDataCharacteristic = pService->createCharacteristic(
         DATA_UUID,
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR
     ); 
     pDataCharacteristic->setValue("NULL");
     pDataCharacteristic->setCallbacks(&_dataCallbacks); //callbacks. muzu mit vic ruznych? tho

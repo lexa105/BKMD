@@ -147,15 +147,15 @@ class BluetoothManager extends EventEmitter {
         }
     }
 
-    public async sendHidReport(report: Buffer) {
+    public async sendHidReport(report: Buffer, withoutResponse = false) {
         if (!this.targetCharacteristics) {
             console.warn('Cannot send HID report: No target characteristic connected.')
             return;
         }
 
         try {
-            await this.targetCharacteristics.writeAsync(report, false);
-            console.log('HID report sent:', report)
+            await this.targetCharacteristics.writeAsync(report, withoutResponse);
+            console.log(`HID report sent ${withoutResponse ? 'without' : 'with'} response:`, report)
         } catch (e) {
             console.error("Failed to send HID report: ", e)
         }
