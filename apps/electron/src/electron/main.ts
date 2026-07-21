@@ -12,6 +12,9 @@ import { KeyMonitor } from './keymonitor.js';
 // Mouse Monitor
 import { MouseMonitor } from './mousemonitor.js';
 
+// Persisted user settings (switch keybind, forwarding toggles)
+import { settingsStore, type AppSettings } from './settings-store.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +22,11 @@ const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 const keyMonitor: KeyMonitor = new KeyMonitor();
 const mouseMonitor: MouseMonitor = new MouseMonitor();
+
+// Whether the user has forwarding switched on (via keybind or UI). Which
+// monitors actually run also depends on the forwardKeyboard/forwardMouse
+// settings - see syncMonitors().
+let monitoringActive = false;
 
 async function createWindow() {
     mainWindow = new BrowserWindow({
@@ -37,6 +45,41 @@ async function createWindow() {
         mainWindow.loadFile(path.join(app.getAppPath(), '/dist-react/index.html'));
     }
 
+}
+
+
+function syncMonitors() {
+    const settings = settingsStore.get();
+    const wantKeyboard = monitoringActive && settings.forwardKeyboard;
+    const wantMouse = monitoringActive && settings.forwardMouse;
+
+    if (wantKeyboard && !keyMonitor.isRunning) keyMonitor.start();
+    if (!wantKeyboard && keyMonitor.isRunning) keyMonitor.stop();
+    if (wantMouse && !mouseMonitor.isRunning) mouseMonitor.start();
+    if (!wantMouse && mouseMonitor.isRunning) mouseMonitor.stop();
+}
+
+function setMonitoring(active: boolean) {
+    monitoringActive = active;
+    console.log(active ? 'Starting monitoring...' : 'Stopping monitoring...');
+    syncMonitors();
+    mainWindow?.webContents.send('monitor:state-changed', monitoringActive);
+}
+
+// globalShortcut.register is lenient about malformed accelerators, so gate
+// keybind:set on the token grammar the renderer's recorder can produce.
+const ACCELERATOR_PATTERN = new RegExp(
+    '^((CommandOrControl|CmdOrCtrl|Command|Cmd|Control|Ctrl|Alt|Option|Shift|Super|Meta)\\+)+' +
+    '([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Space|Enter|Esc|Escape|Backspace|Delete|Tab|Up|Down|Left|Right|Home|End|PageUp|PageDown|[-=\\[\\]\\\\;\',./`])$'
+);
+
+function registerSwitchKeybind(accelerator: string): boolean {
+    try {
+        return globalShortcut.register(accelerator, () => setMonitoring(!monitoringActive));
+    } catch {
+        // Malformed accelerator string
+        return false;
+    }
 }
 
 
@@ -69,6 +112,49 @@ function registerBluetoothIpc() {
 }
 
 
+function registerSettingsIpc() {
+    ipcMain.handle('settings:get', () => settingsStore.get());
+
+    ipcMain.handle('settings:set-forwarding', (_event, patch: Partial<Pick<AppSettings, 'forwardKeyboard' | 'forwardMouse'>>) => {
+        const sanitized: Partial<AppSettings> = {};
+        if (typeof patch?.forwardKeyboard === 'boolean') sanitized.forwardKeyboard = patch.forwardKeyboard;
+        if (typeof patch?.forwardMouse === 'boolean') sanitized.forwardMouse = patch.forwardMouse;
+        const settings = settingsStore.update(sanitized);
+        syncMonitors();
+        return settings;
+    });
+
+    // While the renderer is recording a new keybind, the current one is
+    // suspended so pressing it gets captured instead of toggling monitors.
+    ipcMain.handle('keybind:begin-capture', () => {
+        globalShortcut.unregister(settingsStore.get().switchKeybind);
+    });
+    ipcMain.handle('keybind:cancel-capture', () => {
+        registerSwitchKeybind(settingsStore.get().switchKeybind);
+    });
+
+    ipcMain.handle('keybind:set', (_event, accelerator: string) => {
+        if (typeof accelerator !== 'string' || !ACCELERATOR_PATTERN.test(accelerator)) {
+            return { ok: false, error: `"${accelerator}" is not a valid shortcut.` } as const;
+        }
+        const previous = settingsStore.get().switchKeybind;
+        globalShortcut.unregister(previous);
+        if (registerSwitchKeybind(accelerator)) {
+            const settings = settingsStore.update({ switchKeybind: accelerator });
+            return { ok: true, settings } as const;
+        }
+        registerSwitchKeybind(previous);
+        return { ok: false, error: `Could not register "${accelerator}" - it may be in use by another app.` } as const;
+    });
+
+    ipcMain.handle('monitor:get-state', () => monitoringActive);
+    ipcMain.handle('monitor:set-state', (_event, active: boolean) => {
+        setMonitoring(Boolean(active));
+        return monitoringActive;
+    });
+}
+
+
 app.on('ready', async () => {
 
     try {
@@ -84,22 +170,12 @@ app.on('ready', async () => {
         console.error("Bluetooth initialization failed:", err);
     }
 
+    settingsStore.load();
     registerBluetoothIpc();
+    registerSettingsIpc();
     createWindow();
 
-    const ret = globalShortcut.register('CommandOrControl+Shift+R', () => {
-        if (keyMonitor.isRunning) {
-            console.log('Stopping monitoring...');
-            keyMonitor.stop();
-            mouseMonitor.stop();
-        } else {
-            console.log('Starting monitoring...');
-            keyMonitor.start();
-            mouseMonitor.start();
-        }
-    });
-
-    if (!ret) {
+    if (!registerSwitchKeybind(settingsStore.get().switchKeybind)) {
         console.log('Registration failed. Maybe another app is using this combo?');
     }
 
@@ -111,10 +187,6 @@ app.on('ready', async () => {
         await bluetoothManager.sendHidReport(report, true);
     })
 })
-
-
-
-
 
 
 

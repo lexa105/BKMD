@@ -1,13 +1,38 @@
 @import "tailwindcss";
 
+/*
+ * BKMD control-center design tokens - macOS dark preferences look.
+ * One accent blue, muted grays, 1px borders on rounded surfaces.
+ * Exposed through Tailwind v4 @theme so classes like bg-surface,
+ * text-ink-dim, border-line, bg-accent work everywhere.
+ */
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+
+  --color-accent: #0a84ff;      /* the single accent blue */
+  --color-win: #1e1e20;         /* window / content background */
+  --color-sidebar: #27272a;     /* sidebar background */
+  --color-surface: #2a2a2d;     /* grouped rows / cards */
+  --color-surface-2: #39393d;   /* raised controls (toggle track, kbd chip) */
+  --color-line: #3a3a3e;        /* 1px borders and separators */
+  --color-ink: #f2f2f7;         /* primary text */
+  --color-ink-dim: #a1a1a8;     /* secondary text */
+  --color-ink-faint: #77777e;   /* tertiary text */
+  --color-ok: #32d74b;          /* macOS system green */
+  --color-warn: #ffd60a;
+  --color-danger: #ff453a;
+}
+
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   color-scheme: dark;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #0f172a; /* Slate 900 */
-  color: #f8fafc; /* Slate 50 */
+  background-color: var(--color-win);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
 }

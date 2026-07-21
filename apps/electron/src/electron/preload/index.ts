@@ -1,9 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-// Kept in sync by hand with the equivalent types in ../bluetooth-manager.ts.
-// Duplicated (rather than imported) so this file's CommonJS build - required
-// by Electron's sandboxed preload loader - never pulls in the ESM-only main
-// process modules (noble, etc.) via rootDir inference.
+// Kept in sync by hand with the equivalent types in ../bluetooth-manager.ts
+// and ../settings-store.ts. Duplicated (rather than imported) so this file's
+// CommonJS build - required by Electron's sandboxed preload loader - never
+// pulls in the ESM-only main process modules (noble, etc.) via rootDir
+// inference.
 export interface BluetoothDevice {
     id: string;
     name: string;
@@ -12,6 +13,12 @@ export interface BluetoothDevice {
 }
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
+
+export interface AppSettings {
+    switchKeybind: string;
+    forwardKeyboard: boolean;
+    forwardMouse: boolean;
+}
 
 function subscribe<T extends unknown[]>(channel: string, callback: (...args: T) => void) {
     const listener = (_event: Electron.IpcRendererEvent, ...args: T) => callback(...args);
@@ -30,12 +37,24 @@ const bkmdApi = {
         ipcRenderer.invoke('bluetooth:connect', deviceId),
     disconnect: (): Promise<void> => ipcRenderer.invoke('bluetooth:disconnect'),
 
+    getSettings: (): Promise<AppSettings> => ipcRenderer.invoke('settings:get'),
+    setForwarding: (patch: { forwardKeyboard?: boolean; forwardMouse?: boolean }): Promise<AppSettings> =>
+        ipcRenderer.invoke('settings:set-forwarding', patch),
+    beginKeybindCapture: (): Promise<void> => ipcRenderer.invoke('keybind:begin-capture'),
+    cancelKeybindCapture: (): Promise<void> => ipcRenderer.invoke('keybind:cancel-capture'),
+    setKeybind: (accelerator: string): Promise<{ ok: true; settings: AppSettings } | { ok: false; error: string }> =>
+        ipcRenderer.invoke('keybind:set', accelerator),
+    getMonitorState: (): Promise<boolean> => ipcRenderer.invoke('monitor:get-state'),
+    setMonitorState: (active: boolean): Promise<boolean> => ipcRenderer.invoke('monitor:set-state', active),
+
     onDeviceDiscovered: (callback: (device: BluetoothDevice) => void) =>
         subscribe<[BluetoothDevice]>('bluetooth:device-discovered', callback),
     onScanStateChanged: (callback: (scanning: boolean) => void) =>
         subscribe<[boolean]>('bluetooth:scan-state-changed', callback),
     onConnectionStateChanged: (callback: (state: ConnectionState, device: BluetoothDevice | null) => void) =>
         subscribe<[ConnectionState, BluetoothDevice | null]>('bluetooth:connection-state-changed', callback),
+    onMonitorStateChanged: (callback: (active: boolean) => void) =>
+        subscribe<[boolean]>('monitor:state-changed', callback),
 };
 
 contextBridge.exposeInMainWorld('bkmd', bkmdApi);
